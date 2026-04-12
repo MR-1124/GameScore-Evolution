@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Study Guide - Game Score Evolution Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <div class="aurora"></div>
+  <main class="report-page">
+    <section class="report-shell">
+      <aside class="report-rail">
+        <h2>Study Map</h2>
+        <div class="stat-stack">
+          <a class="page-link" href="{{ url_for('index') }}">Back to Simulator</a>
+          <a class="page-link" href="{{ url_for('presentation') }}">Presentation Page</a>
+          <div class="stat-pill">
+            <strong>Selected Scenario</strong>
+            <span>{{ inputs.scenario }}</span>
+          </div>
+          <div class="stat-pill">
+            <strong>Reference Baseline</strong>
+            <span>{{ benchmark_summary.reference_method }}</span>
+          </div>
+        </div>
+      </aside>
+
+      <section class="report-main">
+        <div class="report-hero">
+          <h1>Study Guide for Viva and Teacher Explanation</h1>
+          <p>
+            Use this page as your preparation sheet. It is written to help you explain the project confidently, step by step, with enough depth to answer follow-up questions.
+          </p>
+        </div>
+
+        <div class="section-card">
+          <h2>1. One-Minute Introduction</h2>
+          <p>
+            “My project is called Game Score Evolution Simulator. It uses ordinary differential equations to model how two teams’ scores change over time. I compare several numerical methods such as Euler, Heun, Midpoint, Ralston, Adams-Bashforth 2, and RK4. The goal is to show how different solvers affect accuracy, runtime, and the realism of score prediction.”
+          </p>
+        </div>
+
+        <div class="section-card">
+          <h2>2. Core Concept to Remember</h2>
+          <div class="detail-grid">
+            <div class="detail-card">
+              <h3>Main mathematical idea</h3>
+              <p>The model uses coupled ODEs because each team’s scoring rate affects the other team’s score evolution.</p>
+            </div>
+            <div class="detail-card">
+              <h3>Why ODEs</h3>
+              <p>ODEs are suitable because score changes continuously with time, and we want a trajectory instead of only a final result.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <h2>3. Full Formula Logic</h2>
+          <div class="formula-box">
+<pre>1. drive = attack × momentum × tempo × saturation
+2. pressure = 1 ± pressure_strength × lead_difference
+3. clutch = periodic burst term based on time
+4. defensive_drag = opponent_defense × coupling × current_score
+5. final rate = max(0, drive × pressure + clutch - defensive_drag)</pre>
+          </div>
+          <p>
+            This formula structure is important because it explains that scoring is not random. It is influenced by offense, defense, current lead, and a saturation cap.
+          </p>
+        </div>
+
+        <div class="section-card">
+          <h2>4. Method Comparison Notes</h2>
+          <table class="mini-table">
+            <thead>
+              <tr>
+                <th>Method</th>
+                <th>Say This</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Euler</td><td>It is the simplest method and easiest to explain, but it is less accurate for nonlinear systems.</td></tr>
+              <tr><td>Heun</td><td>It corrects the Euler estimate by taking a second slope, so it improves stability.</td></tr>
+              <tr><td>Midpoint</td><td>It estimates the slope at the midpoint, which usually gives better accuracy than Euler.</td></tr>
+              <tr><td>Ralston</td><td>It is a refined second-order method with better error behavior than standard RK2 choices.</td></tr>
+              <tr><td>Adams-Bashforth 2</td><td>It uses previous derivative information, so it is efficient for repeated steps.</td></tr>
+              <tr><td>RK4</td><td>It is the strongest accuracy method in this project and serves as the reference baseline.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="section-card">
+          <h2>5. Benchmark Terms You Must Explain Clearly</h2>
+          <div class="qa-grid">
+            <div class="qa-item">
+              <strong>Trajectory RMSE</strong>
+              It measures how closely the whole score path matches the reference path, not only the final score.
+            </div>
+            <div class="qa-item">
+              <strong>Runtime</strong>
+              It shows how long the solver takes, which matters when a model must run quickly.
+            </div>
+            <div class="qa-item">
+              <strong>Efficiency score</strong>
+              It combines accuracy and speed into one number so methods can be compared more easily.
+            </div>
+            <div class="qa-item">
+              <strong>Reference baseline</strong>
+              A very fine-step RK4 run is used as the trusted comparison trajectory.
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <h2>6. Scenario Presets</h2>
+          <p>These presets help you demonstrate different match styles without manually changing every field.</p>
+          <table class="mini-table">
+            <thead>
+              <tr>
+                <th>Scenario</th>
+                <th>Use When You Want To Show</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Balanced Classic</td><td>A fair match with stable, moderate scoring.</td></tr>
+              <tr><td>High Scoring Arena</td><td>Fast offense, larger totals, and more aggressive score movement.</td></tr>
+              <tr><td>Defensive Grind</td><td>Slow, tactical scoring and stronger suppression effects.</td></tr>
+              <tr><td>Late Comeback Drama</td><td>A match where one side starts behind and the clutch effect matters more.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="section-card">
+          <h2>7. How to Answer Common Viva Questions</h2>
+          <div class="qa-grid">
+            <div class="qa-item">
+              <strong>Why did you choose ODEs?</strong>
+              Because ODEs are ideal for continuous change and let us model score growth over time.
+            </div>
+            <div class="qa-item">
+              <strong>Why compare many methods?</strong>
+              To show the trade-off between accuracy, speed, and implementation complexity.
+            </div>
+            <div class="qa-item">
+              <strong>Why not only use RK4?</strong>
+              Because numerical methods should be compared to show the improvement over simpler methods.
+            </div>
+            <div class="qa-item">
+              <strong>What makes this a game analytics project?</strong>
+              It uses scoring, momentum, defense, and comeback measures to analyze match behavior.
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <h2>8. Short Speaking Flow During Presentation</h2>
+          <ol>
+            <li>Introduce the project title and objective.</li>
+            <li>Explain the ODE model and why scores evolve continuously.</li>
+            <li>Show the scenario presets and say that they represent different game styles.</li>
+            <li>Demonstrate the method cards and mention the solver orders.</li>
+            <li>Run the simulation and show the graph.</li>
+            <li>Discuss which method is most accurate and which is fastest.</li>
+            <li>Conclude with why the project is useful for numerical analysis and balancing studies.</li>
+          </ol>
+        </div>
+
+        <div class="section-card">
+          <h2>9. Final Revision Reminder</h2>
+          <p>
+            Remember this core line: “The project compares numerical methods on a nonlinear score evolution ODE model to study how solver choice affects simulation realism, accuracy, and performance.”
+          </p>
+        </div>
+      </section>
+    </section>
+  </main>
+</body>
+</html>

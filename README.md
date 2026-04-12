@@ -40,9 +40,11 @@ Where:
 
 ## Features
 
+- Clickable predefined scenario presets (Balanced, High Scoring, Defensive, Comeback)
+- Scenario auto-fill: selecting a preset updates simulation parameters before running
 - Adjustable team coefficients (attack, defense, momentum, clutch)
 - Global parameters (tempo, pressure strength, defensive coupling, score cap)
-- Method selection via checkboxes
+- Method selection via interactive solver cards
 - Built-in benchmark reference with fine-step RK4
 - Line chart comparing score evolution per method for Team A and Team B
 - Benchmark chart (runtime vs trajectory RMSE)

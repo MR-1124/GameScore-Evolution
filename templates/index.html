@@ -16,8 +16,23 @@
     <section class="panel controls">
       <h1>Game Score Evolution Simulator</h1>
       <p class="subtitle">Numerical Methods + Game Analytics for score dynamics using ODE models.</p>
+      <div class="top-links">
+        <a href="{{ url_for('presentation') }}">Presentation Page</a>
+        <a href="{{ url_for('study_guide') }}">Study Guide</a>
+      </div>
 
       <form method="post" class="control-grid">
+        <h2>Scenario Presets</h2>
+        <input type="hidden" id="scenarioInput" name="scenario" value="{{ inputs.scenario }}">
+        <div class="scenario-grid">
+          {% for key, scenario in scenario_presets.items() %}
+          <button type="button" class="scenario-card {% if key == inputs.scenario %}active{% endif %}" data-scenario-key="{{ key }}">
+            <strong>{{ scenario.name }}</strong>
+            <span>{{ scenario.description }}</span>
+          </button>
+          {% endfor %}
+        </div>
+
         <h2>Simulation Setup</h2>
         <label>Step Size (h)<input type="number" step="0.01" name="step_size" value="{{ inputs.step_size }}"></label>
         <label>Steps<input type="number" step="1" name="steps" value="{{ inputs.steps }}"></label>
@@ -44,13 +59,17 @@
         <label>Clutch<input type="number" step="0.05" name="clutch_b" value="{{ inputs.clutch_b }}"></label>
 
         <h2>Numerical Methods</h2>
-        <div class="methods">
-          <label><input type="checkbox" name="methods" value="euler" {% if 'euler' in inputs.methods %}checked{% endif %}> Euler</label>
-          <label><input type="checkbox" name="methods" value="heun" {% if 'heun' in inputs.methods %}checked{% endif %}> Heun (Improved Euler)</label>
-          <label><input type="checkbox" name="methods" value="midpoint" {% if 'midpoint' in inputs.methods %}checked{% endif %}> Midpoint</label>
-          <label><input type="checkbox" name="methods" value="ralston" {% if 'ralston' in inputs.methods %}checked{% endif %}> Ralston</label>
-          <label><input type="checkbox" name="methods" value="ab2" {% if 'ab2' in inputs.methods %}checked{% endif %}> Adams-Bashforth 2</label>
-          <label><input type="checkbox" name="methods" value="rk4" {% if 'rk4' in inputs.methods %}checked{% endif %}> RK4</label>
+        <div class="method-grid">
+          {% for method in method_catalog %}
+          <label class="method-card {% if method.id in inputs.methods %}selected{% endif %}">
+            <input class="method-check" type="checkbox" name="methods" value="{{ method.id }}" {% if method.id in inputs.methods %}checked{% endif %}>
+            <span class="method-topline">
+              <strong>{{ method.label }}</strong>
+              <em>{{ method.order }}</em>
+            </span>
+            <small>{{ method.description }}</small>
+          </label>
+          {% endfor %}
         </div>
 
         <button type="submit">Run Simulation</button>
@@ -154,6 +173,7 @@
   <script>
     window.simulations = {{ simulations|tojson }};
     window.benchmarks = {{ benchmarks|tojson }};
+    window.scenarioPresets = {{ scenario_presets|tojson }};
   </script>
   <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>

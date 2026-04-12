@@ -1,24 +1,88 @@
 (() => {
   const simulations = window.simulations || [];
   const benchmarks = window.benchmarks || [];
+  const scenarioPresets = window.scenarioPresets || {};
+
+  const scenarioButtons = Array.from(document.querySelectorAll(".scenario-card"));
+  const scenarioInput = document.getElementById("scenarioInput");
+  const methodChecks = Array.from(document.querySelectorAll(".method-check"));
+
+  const setMethodCardState = () => {
+    methodChecks.forEach((checkbox) => {
+      const card = checkbox.closest(".method-card");
+      if (!card) {
+        return;
+      }
+      card.classList.toggle("selected", checkbox.checked);
+    });
+  };
+
+  const applyScenarioValues = (scenarioKey) => {
+    const scenario = scenarioPresets[scenarioKey];
+    if (!scenario || !scenario.values) {
+      return;
+    }
+
+    Object.entries(scenario.values).forEach(([name, value]) => {
+      const input = document.querySelector(`[name="${name}"]`);
+      if (input) {
+        input.value = value;
+      }
+    });
+
+    if (scenarioInput) {
+      scenarioInput.value = scenarioKey;
+    }
+
+    scenarioButtons.forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.scenarioKey === scenarioKey);
+    });
+  };
+
+  methodChecks.forEach((checkbox) => {
+    checkbox.addEventListener("change", setMethodCardState);
+  });
+  setMethodCardState();
+
+  scenarioButtons.forEach((btn) => {
+    btn.addEventListener("click", () => applyScenarioValues(btn.dataset.scenarioKey));
+  });
+
   const ctx = document.getElementById("scoreChart");
   if (!ctx || simulations.length === 0) {
     return;
   }
 
-  const palette = [
-    { a: "#0c7d73", b: "#1eaa9d" },
-    { a: "#d2641a", b: "#f0932b" },
-    { a: "#2d5b9f", b: "#5f84bf" },
-  ];
+  const colorCache = new Map();
+
+  const hashToHue = (text) => {
+    let hash = 0;
+    for (let i = 0; i < text.length; i += 1) {
+      hash = (hash * 31 + text.charCodeAt(i)) % 360;
+    }
+    return hash;
+  };
+
+  const methodColor = (method) => {
+    if (!colorCache.has(method)) {
+      const hue = hashToHue(method);
+      colorCache.set(method, {
+        base: `hsl(${hue} 68% 42%)`,
+        soft: `hsla(${hue} 68% 42% / 0.72)`,
+        strong: `hsla(${hue} 68% 42% / 0.95)`,
+      });
+    }
+    return colorCache.get(method);
+  };
 
   const datasets = [];
   simulations.forEach((sim, i) => {
-    const tone = palette[i % palette.length];
+    const tone = methodColor(sim.method);
     datasets.push({
       label: `${sim.method} - Team A`,
       data: sim.score_a,
-      borderColor: tone.a,
+      borderColor: tone.strong,
+      backgroundColor: tone.strong,
       borderWidth: 2,
       pointRadius: 0,
       tension: 0.2,
@@ -26,7 +90,7 @@
     datasets.push({
       label: `${sim.method} - Team B`,
       data: sim.score_b,
-      borderColor: tone.b,
+      borderColor: tone.soft,
       borderDash: [7, 4],
       borderWidth: 2,
       pointRadius: 0,

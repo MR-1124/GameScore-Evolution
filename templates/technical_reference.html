@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Technical Reference - Game Score Evolution Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <div class="aurora"></div>
+  <main class="report-page">
+    <section class="report-shell">
+      <aside class="report-rail">
+        <h2>Technical Guide</h2>
+        <div class="stat-stack">
+          <a class="page-link" href="{{ url_for('presentation') }}">Presentation Page</a>
+          <a class="page-link" href="{{ url_for('study_guide') }}">Study Guide</a>
+          <div class="stat-pill">
+            <strong>Direct URL</strong>
+            <span>/technical-reference</span>
+          </div>
+          <div class="stat-pill">
+            <strong>Reference Baseline</strong>
+            <span>{{ benchmark_summary.reference_method }}</span>
+          </div>
+          <div class="stat-pill">
+            <strong>Methods Implemented</strong>
+            <span>{{ method_catalog|length }}</span>
+          </div>
+        </div>
+      </aside>
+
+      <section class="report-main">
+        <div class="report-hero">
+          <h1>Complete Technical Reference</h1>
+          <p>
+            This page documents all input fields, parameter interpretation, solver formulas, benchmarking equations, and implementation details of the Game Score Evolution Simulator.
+          </p>
+          <p>
+            Use this as your definitive explanation sheet for viva and teacher discussion.
+          </p>
+        </div>
+
+        <div class="section-card">
+          <h2>1. Core State and Model Variables</h2>
+          <p>
+            The simulator tracks two state variables over time: Team A score \(S_A(t)\) and Team B score \(S_B(t)\).
+            The state vector is:
+          </p>
+          <div class="formula-box">
+<pre>y(t) = [S_A(t), S_B(t)]</pre>
+          </div>
+          <p>
+            The system is coupled: each derivative depends on both scores, not only its own team.
+          </p>
+        </div>
+
+        <div class="section-card">
+          <h2>2. Full ODE Structure</h2>
+          <div class="formula-box">
+<pre>Lead difference: L = S_A - S_B
+
+Pressure terms:
+P_A = 1 - pressure_strength * L
+P_B = 1 + pressure_strength * L
+
+Saturation drive:
+Drive_i = attack_i * momentum_i * tempo * max(0.05, 1 - S_i / score_cap)
+
+Clutch oscillation:
+C_A(t) = clutch_A * sin(0.9 * t)
+C_B(t) = clutch_B * sin(0.9 * t + 1.1)
+
+Defensive drag:
+R_A = defense_B * coupling * S_A
+R_B = defense_A * coupling * S_B
+
+Final ODE rates:
+dS_A/dt = max(0, Drive_A * P_A + C_A(t) - R_A)
+dS_B/dt = max(0, Drive_B * P_B + C_B(t) - R_B)</pre>
+          </div>
+          <p>
+            The \(max(0, \cdot)\) clamp ensures the model does not produce negative scoring rates.
+          </p>
+        </div>
+
+        <div class="section-card">
+          <h2>3. Input Field Explanation (All Numeric Controls)</h2>
+          <table class="mini-table">
+            <thead>
+              <tr>
+                <th>Input Field</th>
+                <th>Meaning</th>
+                <th>Numerical Effect</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Step Size (h)</td><td>Time increment per solver step</td><td>Smaller h improves accuracy, increases runtime.</td></tr>
+              <tr><td>Steps</td><td>Total number of integration steps</td><td>Total simulated horizon is approximately h * steps.</td></tr>
+              <tr><td>Benchmark Refinement</td><td>Reference RK4 step refinement factor</td><td>Reference step is h/refinement; larger gives stricter baseline.</td></tr>
+              <tr><td>Score Cap</td><td>Saturation threshold in drive term</td><td>Higher cap delays saturation, allowing larger late growth.</td></tr>
+              <tr><td>Tempo</td><td>Global match speed multiplier</td><td>Higher tempo scales both teams' drive upward.</td></tr>
+              <tr><td>Pressure Strength</td><td>Sensitivity to current lead difference</td><td>Higher values amplify front-runner/chaser pressure effects.</td></tr>
+              <tr><td>Defensive Coupling</td><td>Cross-team defensive suppression factor</td><td>Higher coupling reduces score growth for both teams.</td></tr>
+              <tr><td>Team A Initial</td><td>Initial score of Team A</td><td>Sets starting point; influences lead-dependent pressure immediately.</td></tr>
+              <tr><td>Team B Initial</td><td>Initial score of Team B</td><td>Same as above for Team B.</td></tr>
+              <tr><td>Attack (A/B)</td><td>Base offensive drive coefficient</td><td>Higher attack increases Drive_i and growth speed.</td></tr>
+              <tr><td>Defense (A/B)</td><td>Defensive resistance coefficient</td><td>Increases opponent drag through coupling term.</td></tr>
+              <tr><td>Momentum (A/B)</td><td>Rhythm/form multiplier</td><td>Scales drive continuously over the timeline.</td></tr>
+              <tr><td>Clutch (A/B)</td><td>Amplitude of periodic burst term</td><td>Creates stronger swings and comeback spikes.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="section-card">
+          <h2>4. Numerical Methods and Update Formulas</h2>
+          <p>For each method, y_n is the state at step n and f(t, y) is the ODE derivative.</p>
+
+          <h3>Euler (1st order)</h3>
+          <div class="formula-box">
+<pre>y_{n+1} = y_n + h * f(t_n, y_n)</pre>
+          </div>
+
+          <h3>Heun / Improved Euler (2nd order)</h3>
+          <div class="formula-box">
+<pre>k1 = f(t_n, y_n)
+y_predict = y_n + h * k1
+k2 = f(t_n + h, y_predict)
+y_{n+1} = y_n + (h/2) * (k1 + k2)</pre>
+          </div>
+
+          <h3>Midpoint RK2 (2nd order)</h3>
+          <div class="formula-box">
+<pre>k1 = f(t_n, y_n)
+k2 = f(t_n + h/2, y_n + (h/2) * k1)
+y_{n+1} = y_n + h * k2</pre>
+          </div>
+
+          <h3>Ralston RK2 (optimized 2nd order)</h3>
+          <div class="formula-box">
+<pre>k1 = f(t_n, y_n)
+k2 = f(t_n + 3h/4, y_n + (3h/4) * k1)
+y_{n+1} = y_n + h * ((1/3) * k1 + (2/3) * k2)</pre>
+          </div>
+
+          <h3>Adams-Bashforth 2 (explicit multistep)</h3>
+          <div class="formula-box">
+<pre>y_{n+1} = y_n + h * ( (3/2) * f_n - (1/2) * f_{n-1} )</pre>
+          </div>
+          <p>AB2 requires one starting step; this implementation bootstraps with Heun.</p>
+
+          <h3>RK4 (4th order)</h3>
+          <div class="formula-box">
+<pre>k1 = f(t_n, y_n)
+k2 = f(t_n + h/2, y_n + (h/2) * k1)
+k3 = f(t_n + h/2, y_n + (h/2) * k2)
+k4 = f(t_n + h, y_n + h * k3)
+
+y_{n+1} = y_n + (h/6) * (k1 + 2k2 + 2k3 + k4)</pre>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <h2>5. Benchmark Metrics and Equations</h2>
+          <p>
+            Each selected method is evaluated against a fine-step RK4 reference trajectory.
+          </p>
+
+          <h3>Final-score absolute error</h3>
+          <div class="formula-box">
+<pre>Error_A = |S_A^{method}(T) - S_A^{ref}(T)|
+Error_B = |S_B^{method}(T) - S_B^{ref}(T)|</pre>
+          </div>
+
+          <h3>Trajectory RMSE</h3>
+          <div class="formula-box">
+<pre>RMSE = sqrt( (1/(2N)) * sum_{i=1..N} [ (A_i - A_i_ref)^2 + (B_i - B_i_ref)^2 ] )</pre>
+          </div>
+
+          <h3>Efficiency score</h3>
+          <div class="formula-box">
+<pre>Efficiency = 1 / ((RMSE + epsilon) * (runtime_ms + epsilon))</pre>
+          </div>
+          <p>
+            Higher efficiency means better speed-accuracy balance.
+          </p>
+        </div>
+
+        <div class="section-card">
+          <h2>6. Gameplay Analytics Metrics</h2>
+          <table class="mini-table">
+            <thead>
+              <tr>
+                <th>Metric</th>
+                <th>Definition</th>
+                <th>Interpretation</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Final Scores</td><td>End scores of Team A and Team B</td><td>Outcome summary of each method run.</td></tr>
+              <tr><td>Winner</td><td>Team with higher final score</td><td>Simple result category: A, B, or Draw.</td></tr>
+              <tr><td>Lead Changes</td><td>Sign flips in score difference over time</td><td>How dynamic/competitive the match was.</td></tr>
+              <tr><td>Avg Total Scoring Rate</td><td>(Total(T)-Total(0)) / (T-0)</td><td>Pace indicator for the whole match.</td></tr>
+              <tr><td>Volatility Index</td><td>std(total score) / mean(total score)</td><td>Relative fluctuation intensity.</td></tr>
+              <tr><td>Comeback Index</td><td>Max prior deficit normalized by winner score</td><td>How strong the comeback behavior was.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="section-card">
+          <h2>7. Scenario Presets and Their Purpose</h2>
+          <p>
+            Presets are parameter bundles for rapid experimentation. They keep the model fixed while changing coefficients to represent different game styles.
+          </p>
+          <table class="mini-table">
+            <thead>
+              <tr>
+                <th>Scenario</th>
+                <th>Primary Characteristic</th>
+                <th>Best Use in Demo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for key, scenario in scenario_presets.items() %}
+              <tr>
+                <td>{{ scenario.name }}</td>
+                <td>{{ scenario.description }}</td>
+                <td>
+                  {% if key == 'balanced_classic' %}Baseline method comparison.{% elif key == 'high_scoring_arena' %}Show high-tempo growth and solver spread.{% elif key == 'defensive_grind' %}Show low-growth tactical dynamics.{% else %}Show pressure and comeback behavior.{% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="section-card">
+          <h2>8. Implementation Details (Code Architecture)</h2>
+          <ul>
+            <li><strong>Model:</strong> ODE definitions and team/match parameter classes in game_score_evolution/model.py</li>
+            <li><strong>Solvers:</strong> all numerical methods in game_score_evolution/methods.py</li>
+            <li><strong>Analytics:</strong> gameplay metrics and RMSE helper in game_score_evolution/analytics.py</li>
+            <li><strong>Backend:</strong> request parsing, scenario defaults, simulation loop, benchmark generation in app.py</li>
+            <li><strong>Frontend:</strong> controls, scenario cards, method cards, chart rendering in templates/index.html and static/app.js</li>
+            <li><strong>Presentation pages:</strong> teacher-facing and student-facing explainers in templates/presentation.html and templates/study_guide.html</li>
+          </ul>
+        </div>
+
+        <div class="section-card">
+          <h2>9. Practical Interpretation for Viva</h2>
+          <ol>
+            <li>Start with model logic: explain why ODEs are needed.</li>
+            <li>Explain each input as a coefficient that changes trajectory shape.</li>
+            <li>Run at least two methods and compare trajectory differences.</li>
+            <li>Use benchmark chart to justify speed-versus-accuracy tradeoff.</li>
+            <li>Use scenario presets to prove model flexibility.</li>
+            <li>Conclude that solver selection depends on fidelity requirement and runtime budget.</li>
+          </ol>
+        </div>
+      </section>
+    </section>
+  </main>
+</body>
+</html>

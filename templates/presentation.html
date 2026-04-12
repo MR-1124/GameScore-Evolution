@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project Presentation - Game Score Evolution Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <div class="aurora"></div>
+  <main class="presentation-deck">
+    <aside class="deck-sidebar">
+      <div class="deck-brand">
+        <span class="deck-kicker">Presentation Deck</span>
+        <h1>Game Score Evolution Simulator</h1>
+        <p>Speaker notes, theory, benchmark evidence, and viva-ready explanation in slide form.</p>
+      </div>
+
+      <nav class="deck-nav" aria-label="Slide navigation">
+        <a href="#slide-1">1. Title</a>
+        <a href="#slide-2">2. Problem</a>
+        <a href="#slide-3">3. ODE Model</a>
+        <a href="#slide-4">4. Variables</a>
+        <a href="#slide-5">5. Methods</a>
+        <a href="#slide-6">6. Benchmarks</a>
+        <a href="#slide-7">7. Scenarios</a>
+        <a href="#slide-8">8. Result Story</a>
+        <a href="#slide-9">9. How I Explain</a>
+        <a href="#slide-10">10. Closing</a>
+      </nav>
+
+      <div class="stat-stack deck-stats">
+        <a class="page-link" href="{{ url_for('index') }}">Back to Simulator</a>
+        <a class="page-link" href="{{ url_for('study_guide') }}">Open Study Guide</a>
+        <div class="stat-pill">
+          <strong>Reference Method</strong>
+          <span>{{ benchmark_summary.reference_method }}</span>
+        </div>
+        <div class="stat-pill">
+          <strong>Best Accuracy</strong>
+          <span>{{ benchmark_summary.best_accuracy.method if benchmark_summary.best_accuracy else 'N/A' }}</span>
+        </div>
+      </div>
+    </aside>
+
+    <section class="deck-content">
+      <section class="slide-card slide-hero" id="slide-1">
+        <span class="slide-number">Slide 01</span>
+        <h2>Game Score Evolution Simulator</h2>
+        <p class="slide-lead">A numerical methods project that models two-team score evolution using coupled ODEs and compares solver accuracy, runtime, and behavior under different game scenarios.</p>
+        <div class="slide-highlight-row">
+          <div class="slide-highlight">
+            <strong>Topic</strong>
+            <span>Numerical Methods + Game Analytics</span>
+          </div>
+          <div class="slide-highlight">
+            <strong>Core Math</strong>
+            <span>Coupled first-order nonlinear ODEs</span>
+          </div>
+          <div class="slide-highlight">
+            <strong>Goal</strong>
+            <span>Show how solver choice changes trajectory fidelity</span>
+          </div>
+        </div>
+        <p class="speaker-note">Opening line: say that your project treats score progression as a dynamic system, not a fixed formula, so numerical methods become meaningful and measurable.</p>
+      </section>
+
+      <section class="slide-card" id="slide-2">
+        <span class="slide-number">Slide 02</span>
+        <h2>Why This Project Matters</h2>
+        <div class="slide-columns">
+          <div>
+            <p>
+              In real games, scoring is influenced by attack, defense, momentum, fatigue, pressure, and late-match bursts. That means a straight-line model is too weak to describe how match scores actually evolve.
+            </p>
+            <p>
+              This project is important because it shows how mathematics can simulate a living system. The score of one team does not evolve independently; it reacts to the other team, which creates feedback loops and competition-driven changes.
+            </p>
+          </div>
+          <div class="slide-callout">
+            <h3>What to emphasize aloud</h3>
+            <ul>
+              <li>The problem is continuous, not discrete.</li>
+              <li>Scores depend on interaction, not isolation.</li>
+              <li>Numerical methods let us compute trajectories when no closed-form solution is practical.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide-card" id="slide-3">
+        <span class="slide-number">Slide 03</span>
+        <h2>The ODE Model</h2>
+        <p>The simulator tracks the score state of both teams over time:</p>
+        <div class="formula-box slide-formula">
+<pre>dS_A/dt = max(0, drive_A * pressure_A + clutch_A(t) - defensive_drag_A)
+dS_B/dt = max(0, drive_B * pressure_B + clutch_B(t) - defensive_drag_B)</pre>
+        </div>
+        <div class="slide-two-up">
+          <div class="detail-card">
+            <h3>How the model works</h3>
+            <ul>
+              <li><strong>Drive</strong> is the offensive scoring potential.</li>
+              <li><strong>Pressure</strong> changes with the current score difference.</li>
+              <li><strong>Clutch</strong> introduces bursts and momentum swings.</li>
+              <li><strong>Defensive drag</strong> prevents unlimited growth.</li>
+            </ul>
+          </div>
+          <div class="detail-card">
+            <h3>Why max(0, ...)</h3>
+            <p>It prevents the score rate from going negative, because scores cannot decrease in this model. That keeps the simulation realistic for a scoring system.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide-card" id="slide-4">
+        <span class="slide-number">Slide 04</span>
+        <h2>Variables and Parameters</h2>
+        <div class="detail-grid">
+          <div class="detail-card">
+            <h3>Team parameters</h3>
+            <ul>
+              <li>Attack: scoring strength</li>
+              <li>Defense: suppression power</li>
+              <li>Momentum: current rhythm</li>
+              <li>Clutch: time-based burst potential</li>
+            </ul>
+          </div>
+          <div class="detail-card">
+            <h3>Global parameters</h3>
+            <ul>
+              <li>Tempo: pace of the match</li>
+              <li>Pressure strength: influence of lead difference</li>
+              <li>Coupling: defensive interaction factor</li>
+              <li>Score cap: saturation control for realism</li>
+            </ul>
+          </div>
+        </div>
+        <p class="speaker-note">Say that these parameters let you simulate different game styles without changing the mathematical framework.</p>
+      </section>
+
+      <section class="slide-card" id="slide-5">
+        <span class="slide-number">Slide 05</span>
+        <h2>Numerical Methods Compared</h2>
+        <div class="method-table-wrap">
+          <table class="mini-table">
+            <thead>
+              <tr>
+                <th>Method</th>
+                <th>Type</th>
+                <th>Presentation point</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for method in method_catalog %}
+              <tr>
+                <td>{{ method.label }}</td>
+                <td>{{ method.order }}</td>
+                <td>
+                  {% if method.id == 'euler' %}Baseline first-order method; easiest to explain but least accurate.{% elif method.id == 'heun' %}Predictor-corrector improvement over Euler.{% elif method.id == 'midpoint' %}Uses midpoint slope for stronger second-order behavior.{% elif method.id == 'ralston' %}Second-order method with optimized weighting for lower error.{% elif method.id == 'ab2' %}Multistep solver that uses previous derivative information.{% else %}Fourth-order high-accuracy method used as the reference baseline.{% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="slide-callout">
+          <h3>Best line to say</h3>
+          <p>“I compare methods to show the numerical trade-off: simple methods are fast, but higher-order methods are more reliable for nonlinear score dynamics.”</p>
+        </div>
+      </section>
+
+      <section class="slide-card" id="slide-6">
+        <span class="slide-number">Slide 06</span>
+        <h2>Benchmarks and Error Analysis</h2>
+        <div class="slide-columns">
+          <div>
+            <p>
+              The project uses a fine-step RK4 run as the reference solution. Each method is compared against it using runtime and trajectory RMSE.
+            </p>
+            <p>
+              This is important because numerical methods should be judged by both performance and accuracy. A fast method is useful, but a fast method that drifts too far from the true trajectory is not reliable.
+            </p>
+          </div>
+          <div class="stat-stack">
+            <div class="stat-pill">
+              <strong>Best Accuracy</strong>
+              <span>{{ benchmark_summary.best_accuracy.method if benchmark_summary.best_accuracy else 'N/A' }}</span>
+            </div>
+            <div class="stat-pill">
+              <strong>Best Efficiency</strong>
+              <span>{{ benchmark_summary.best_efficiency.method if benchmark_summary.best_efficiency else 'N/A' }}</span>
+            </div>
+            <div class="stat-pill">
+              <strong>Reference Baseline</strong>
+              <span>{{ benchmark_summary.reference_method }}</span>
+            </div>
+          </div>
+        </div>
+        <p class="speaker-note">If asked about RMSE, explain it is not just final-score error; it measures the full path difference over time.</p>
+      </section>
+
+      <section class="slide-card" id="slide-7">
+        <span class="slide-number">Slide 07</span>
+        <h2>Scenario Presets</h2>
+        <p>These presets are useful because they let you show different kinds of games in one click.</p>
+        <div class="scenario-showcase">
+          {% for key, scenario in scenario_presets.items() %}
+          <article class="scenario-preview">
+            <h3>{{ scenario.name }}</h3>
+            <p>{{ scenario.description }}</p>
+            <ul>
+              {% if key == 'balanced_classic' %}
+              <li>Moderate pace</li><li>Stable scoring</li><li>Good for baseline explanation</li>
+              {% elif key == 'high_scoring_arena' %}
+              <li>Fast offense</li><li>Loose defense</li><li>Shows large score growth</li>
+              {% elif key == 'defensive_grind' %}
+              <li>Slow tempo</li><li>Strong suppression</li><li>Shows tactical match behavior</li>
+              {% else %}
+              <li>One team starts behind</li><li>Clutch effect becomes visible</li><li>Good for comeback discussion</li>
+              {% endif %}
+            </ul>
+          </article>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="slide-card" id="slide-8">
+        <span class="slide-number">Slide 08</span>
+        <h2>How to Read the Results</h2>
+        <div class="detail-grid">
+          <div class="detail-card">
+            <h3>Graph interpretation</h3>
+            <ul>
+              <li>Each method has its own trajectory line.</li>
+              <li>Team A and Team B share the same color family within a method.</li>
+              <li>Overlapping lines are easier to compare because the method color stays consistent.</li>
+            </ul>
+          </div>
+          <div class="detail-card">
+            <h3>What benchmark tables prove</h3>
+            <ul>
+              <li>Which method is fastest.</li>
+              <li>Which method is closest to the reference path.</li>
+              <li>Which method gives the best speed-accuracy balance.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide-card" id="slide-9">
+        <span class="slide-number">Slide 09</span>
+        <h2>Answering the Teacher Confidently</h2>
+        <div class="qa-grid">
+          <div class="qa-item"><strong>Why not a simple formula?</strong> Because a simple formula cannot capture feedback, pressure, and match swings.</div>
+          <div class="qa-item"><strong>Why compare many methods?</strong> To show numerical-method strengths and weaknesses in the same model.</div>
+          <div class="qa-item"><strong>Why use a reference RK4 run?</strong> It gives a trustworthy baseline for measuring other methods.</div>
+          <div class="qa-item"><strong>Why is this a good project?</strong> It combines theory, computation, visualization, and applied interpretation.</div>
+        </div>
+      </section>
+
+      <section class="slide-card slide-closing" id="slide-10">
+        <span class="slide-number">Slide 10</span>
+        <h2>Closing Statement</h2>
+        <p>
+          This project shows how numerical methods can simulate realistic scoring behavior, compare solver quality, and support game balancing analysis. It demonstrates that mathematics is useful not only for solving equations, but also for explaining and predicting dynamic systems in a visually meaningful way.
+        </p>
+        <p class="speaker-note">Final line: say that the project is a practical bridge between numerical methods and real-world style game analytics.</p>
+        <div class="top-links">
+          <a href="{{ url_for('index') }}">Open Simulator</a>
+          <a href="{{ url_for('study_guide') }}">Study Guide</a>
+        </div>
+      </section>
+    </section>
+  </main>
+</body>
+</html>
