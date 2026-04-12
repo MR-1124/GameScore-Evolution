@@ -4,5 +4,6 @@ __pycache__/
 .env
 .vscode/
 *.docx
+*.pdf
 generate_study_doc.py
 exp.py
