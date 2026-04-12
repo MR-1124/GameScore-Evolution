@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Game Score Evolution Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <div class="aurora"></div>
+  <main class="layout">
+    <section class="panel controls">
+      <h1>Game Score Evolution Simulator</h1>
+      <p class="subtitle">Numerical Methods + Game Analytics for score dynamics using ODE models.</p>
+
+      <form method="post" class="control-grid">
+        <h2>Simulation Setup</h2>
+        <label>Step Size (h)<input type="number" step="0.01" name="step_size" value="{{ inputs.step_size }}"></label>
+        <label>Steps<input type="number" step="1" name="steps" value="{{ inputs.steps }}"></label>
+        <label>Benchmark Refinement<input type="number" step="1" name="benchmark_refinement" value="{{ inputs.benchmark_refinement }}"></label>
+        <label>Score Cap<input type="number" step="1" name="score_cap" value="{{ inputs.score_cap }}"></label>
+        <label>Tempo<input type="number" step="0.05" name="tempo" value="{{ inputs.tempo }}"></label>
+        <label>Pressure Strength<input type="number" step="0.005" name="pressure_strength" value="{{ inputs.pressure_strength }}"></label>
+        <label>Defensive Coupling<input type="number" step="0.005" name="coupling" value="{{ inputs.coupling }}"></label>
+
+        <h2>Initial Score</h2>
+        <label>Team A Initial<input type="number" step="1" name="initial_a" value="{{ inputs.initial_a }}"></label>
+        <label>Team B Initial<input type="number" step="1" name="initial_b" value="{{ inputs.initial_b }}"></label>
+
+        <h2>Team A Coefficients</h2>
+        <label>Attack<input type="number" step="0.05" name="attack_a" value="{{ inputs.attack_a }}"></label>
+        <label>Defense<input type="number" step="0.05" name="defense_a" value="{{ inputs.defense_a }}"></label>
+        <label>Momentum<input type="number" step="0.05" name="momentum_a" value="{{ inputs.momentum_a }}"></label>
+        <label>Clutch<input type="number" step="0.05" name="clutch_a" value="{{ inputs.clutch_a }}"></label>
+
+        <h2>Team B Coefficients</h2>
+        <label>Attack<input type="number" step="0.05" name="attack_b" value="{{ inputs.attack_b }}"></label>
+        <label>Defense<input type="number" step="0.05" name="defense_b" value="{{ inputs.defense_b }}"></label>
+        <label>Momentum<input type="number" step="0.05" name="momentum_b" value="{{ inputs.momentum_b }}"></label>
+        <label>Clutch<input type="number" step="0.05" name="clutch_b" value="{{ inputs.clutch_b }}"></label>
+
+        <h2>Numerical Methods</h2>
+        <div class="methods">
+          <label><input type="checkbox" name="methods" value="euler" {% if 'euler' in inputs.methods %}checked{% endif %}> Euler</label>
+          <label><input type="checkbox" name="methods" value="heun" {% if 'heun' in inputs.methods %}checked{% endif %}> Heun (Improved Euler)</label>
+          <label><input type="checkbox" name="methods" value="midpoint" {% if 'midpoint' in inputs.methods %}checked{% endif %}> Midpoint</label>
+          <label><input type="checkbox" name="methods" value="ralston" {% if 'ralston' in inputs.methods %}checked{% endif %}> Ralston</label>
+          <label><input type="checkbox" name="methods" value="ab2" {% if 'ab2' in inputs.methods %}checked{% endif %}> Adams-Bashforth 2</label>
+          <label><input type="checkbox" name="methods" value="rk4" {% if 'rk4' in inputs.methods %}checked{% endif %}> RK4</label>
+        </div>
+
+        <button type="submit">Run Simulation</button>
+      </form>
+    </section>
+
+    <section class="panel output">
+      <div class="canvas-wrap">
+        <canvas id="scoreChart"></canvas>
+      </div>
+      <div class="canvas-wrap compact">
+        <canvas id="benchmarkChart"></canvas>
+      </div>
+
+      <h2>Benchmark Highlights</h2>
+      <div class="metrics-grid">
+        <article class="metric-card">
+          <h3>Best Accuracy</h3>
+          <p>{{ benchmark_summary.best_accuracy.method if benchmark_summary.best_accuracy else 'N/A' }}</p>
+          <small>RMSE: {{ benchmark_summary.best_accuracy.trajectory_rmse if benchmark_summary.best_accuracy else '-' }}</small>
+        </article>
+        <article class="metric-card">
+          <h3>Fastest</h3>
+          <p>{{ benchmark_summary.fastest.method if benchmark_summary.fastest else 'N/A' }}</p>
+          <small>Runtime: {{ benchmark_summary.fastest.runtime_ms if benchmark_summary.fastest else '-' }} ms</small>
+        </article>
+        <article class="metric-card">
+          <h3>Best Efficiency</h3>
+          <p>{{ benchmark_summary.best_efficiency.method if benchmark_summary.best_efficiency else 'N/A' }}</p>
+          <small>Score: {{ benchmark_summary.best_efficiency.efficiency_score if benchmark_summary.best_efficiency else '-' }}</small>
+        </article>
+      </div>
+
+      <h2>Analytics Summary</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>Final Team A</th>
+              <th>Final Team B</th>
+              <th>Winner</th>
+              <th>Lead Changes</th>
+              <th>Avg Scoring Rate</th>
+              <th>Volatility</th>
+              <th>Comeback Index</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in analytics %}
+            <tr>
+              <td>{{ row.method }}</td>
+              <td>{{ row.final_score_a }}</td>
+              <td>{{ row.final_score_b }}</td>
+              <td>{{ row.winner }}</td>
+              <td>{{ row.lead_changes }}</td>
+              <td>{{ row.avg_total_scoring_rate }}</td>
+              <td>{{ row.volatility_index }}</td>
+              <td>{{ row.comeback_index }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Benchmark Details</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>Runtime (ms)</th>
+              <th>Final Error A</th>
+              <th>Final Error B</th>
+              <th>Trajectory RMSE</th>
+              <th>Efficiency Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in benchmarks %}
+            <tr>
+              <td>{{ row.method }}</td>
+              <td>{{ row.runtime_ms }}</td>
+              <td>{{ row.final_error_team_a }}</td>
+              <td>{{ row.final_error_team_b }}</td>
+              <td>{{ row.trajectory_rmse }}</td>
+              <td>{{ row.efficiency_score }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="insight">
+        <h3>How to present this project</h3>
+        <p>Reference baseline: {{ benchmark_summary.reference_method }}. Compare solver runtime against RMSE to discuss numerical cost, practical fidelity, and method selection for real-time game balancing.</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    window.simulations = {{ simulations|tojson }};
+    window.benchmarks = {{ benchmarks|tojson }};
+  </script>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

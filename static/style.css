@@ -1,0 +1,255 @@
+:root {
+  --bg-1: #f4efe5;
+  --bg-2: #d7e6ed;
+  --bg-3: #fcefdc;
+  --panel: rgba(255, 255, 255, 0.8);
+  --ink: #0c1a28;
+  --muted: #4b5a69;
+  --accent: #0c7d73;
+  --accent-2: #e48337;
+  --accent-3: #2d5b9f;
+  --line: rgba(15, 31, 47, 0.13);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Sora", sans-serif;
+  color: var(--ink);
+  background: linear-gradient(118deg, var(--bg-1), var(--bg-2), var(--bg-3));
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.aurora {
+  position: fixed;
+  inset: -120px;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(12, 125, 115, 0.24), transparent 45%),
+    radial-gradient(circle at 80% 25%, rgba(228, 131, 55, 0.26), transparent 50%),
+    radial-gradient(circle at 70% 80%, rgba(62, 98, 156, 0.22), transparent 52%);
+  filter: blur(36px);
+  pointer-events: none;
+  animation: drift 12s ease-in-out infinite alternate;
+}
+
+@keyframes drift {
+  from { transform: translateY(-10px) scale(1); }
+  to { transform: translateY(8px) scale(1.03); }
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 430px) 1fr;
+  gap: 18px;
+  padding: 20px;
+  position: relative;
+  z-index: 2;
+}
+
+.panel {
+  background: var(--panel);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: 0 16px 40px rgba(15, 31, 47, 0.09);
+}
+
+.controls {
+  padding: 22px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+h1 {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.9rem;
+}
+
+.subtitle {
+  margin-top: 8px;
+  color: var(--muted);
+}
+
+.control-grid {
+  margin-top: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.control-grid h2 {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line);
+}
+
+h2 {
+  margin: 14px 0 4px;
+  font-size: 1rem;
+  font-family: "Space Grotesk", sans-serif;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 9px 10px;
+  font: inherit;
+  background: rgba(255, 255, 255, 0.85);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input:focus {
+  outline: none;
+  border-color: rgba(12, 125, 115, 0.7);
+  box-shadow: 0 0 0 3px rgba(12, 125, 115, 0.15);
+}
+
+.methods {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.methods label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.92rem;
+  color: var(--ink);
+}
+
+button {
+  margin-top: 8px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(95deg, var(--accent), #189ea0);
+  color: white;
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(12, 125, 115, 0.25);
+}
+
+.output {
+  padding: 20px;
+  display: grid;
+  gap: 14px;
+}
+
+.canvas-wrap {
+  height: 350px;
+  border-radius: 16px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--line);
+}
+
+.canvas-wrap.compact {
+  height: 280px;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.metric-card {
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.94), rgba(232, 244, 247, 0.8));
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.metric-card h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.metric-card p {
+  margin: 6px 0 2px;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.1rem;
+}
+
+.metric-card small {
+  color: var(--accent-3);
+  font-weight: 600;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+th {
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.insight {
+  border-left: 4px solid var(--accent-2);
+  padding: 10px 12px;
+  background: rgba(228, 131, 55, 0.08);
+  border-radius: 12px;
+}
+
+.insight h3 {
+  margin: 0 0 6px;
+  font-family: "Space Grotesk", sans-serif;
+}
+
+.insight p {
+  margin: 0;
+  color: var(--muted);
+}
+
+@media (max-width: 980px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .controls {
+    max-height: none;
+  }
+
+  .canvas-wrap {
+    height: 290px;
+  }
+
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}
