@@ -344,10 +344,10 @@ def presentation():
     return render_template("presentation.html", **payload)
 
 
-@app.route("/study-guide", methods=["GET"])
-def study_guide():
+@app.route("/guide", methods=["GET"])
+def guide():
     payload = simulate(request.args)
-    return render_template("study_guide.html", **payload)
+    return render_template("guide.html", **payload)
 
 
 @app.route("/technical-reference", methods=["GET"])

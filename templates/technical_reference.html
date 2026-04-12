@@ -18,7 +18,7 @@
         <div class="stat-stack">
           <a class="page-link" href="{{ url_for('index') }}">Back to Simulator</a>
           <a class="page-link" href="{{ url_for('presentation') }}">Presentation Page</a>
-          <a class="page-link" href="{{ url_for('study_guide') }}">Study Guide</a>
+          <a class="page-link" href="{{ url_for('guide') }}">Study Guide</a>
           <div class="stat-pill">
             <strong>Direct URL</strong>
             <span>/technical-reference</span>
@@ -664,7 +664,7 @@ where ε = 1×10⁻⁶ (prevents division by zero)</pre>
                 <h4>app.py (361 lines)</h4>
                 <p><strong>Constants:</strong> SCENARIO_PRESETS (4 scenarios with all parameter values), METHOD_CATALOG (6 method descriptors for UI).</p>
                 <p><strong>Helpers:</strong> <code>_float()</code>, <code>_int()</code> for safe form parsing. <code>_sample_reference()</code> for downsampling. <code>_scenario_key()</code> and <code>_get_method_ids()</code> for input extraction.</p>
-                <p><strong>Core:</strong> <code>simulate()</code> orchestrates the entire pipeline. <strong>Routes:</strong> 4 endpoints (/, /presentation, /study-guide, /technical-reference), each calling simulate() and rendering a template.</p>
+                <p><strong>Core:</strong> <code>simulate()</code> orchestrates the entire pipeline. <strong>Routes:</strong> 4 endpoints (/, /presentation, /guide, /technical-reference), each calling simulate() and rendering a template.</p>
               </div>
             </div>
             <div class="step-item">
@@ -704,10 +704,10 @@ where ε = 1×10⁻⁶ (prevents division by zero)</pre>
                 <td>presentation.html</td>
               </tr>
               <tr>
-                <td><code>/study-guide</code></td>
+                <td><code>/guide</code></td>
                 <td>GET</td>
                 <td>16-section study guide with deep explanations, worked examples, and viva preparation.</td>
-                <td>study_guide.html</td>
+                <td>guide.html</td>
               </tr>
               <tr>
                 <td><code>/technical-reference</code></td>

@@ -86,7 +86,7 @@ The `max(0, ...)` clamp ensures scores are **monotonically non-decreasing** (sco
 - Error analysis theory, live benchmark data, real-world applications
 - Comprehensive Q&A slide for viva defense
 
-### Study Guide (`/study-guide`)
+### Study Guide (`/guide`)
 - 16-section deep study resource
 - ODE fundamentals, model walkthrough with worked examples
 - Each solver explained with intuition + formula + strengths/weaknesses
@@ -129,7 +129,7 @@ Game-Score/
 ├── templates/                      # Jinja2 HTML templates
 │   ├── index.html                  # Main simulator dashboard
 │   ├── presentation.html           # 16-slide presentation deck
-│   ├── study_guide.html            # 16-section study guide
+│   ├── guide.html                  # 16-section study guide
 │   └── technical_reference.html    # 14-section technical reference
 │
 └── static/                         # Frontend assets
