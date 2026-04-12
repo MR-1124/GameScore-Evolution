@@ -16,6 +16,7 @@
       <aside class="report-rail">
         <h2>Technical Guide</h2>
         <div class="stat-stack">
+          <a class="page-link" href="{{ url_for('index') }}">Back to Simulator</a>
           <a class="page-link" href="{{ url_for('presentation') }}">Presentation Page</a>
           <a class="page-link" href="{{ url_for('study_guide') }}">Study Guide</a>
           <div class="stat-pill">
@@ -30,6 +31,18 @@
             <strong>Methods Implemented</strong>
             <span>{{ method_catalog|length }}</span>
           </div>
+          <div class="stat-pill">
+            <strong>Step Size</strong>
+            <span>h = {{ inputs.step_size }}</span>
+          </div>
+          <div class="stat-pill">
+            <strong>Total Steps</strong>
+            <span>{{ inputs.steps }}</span>
+          </div>
+          <div class="stat-pill">
+            <strong>Simulation Duration</strong>
+            <span>T ≈ {{ "%.1f"|format(inputs.step_size * inputs.steps) }}</span>
+          </div>
         </div>
       </aside>
 
@@ -37,229 +50,742 @@
         <div class="report-hero">
           <h1>Complete Technical Reference</h1>
           <p>
-            This page documents all input fields, parameter interpretation, solver formulas, benchmarking equations, and implementation details of the Game Score Evolution Simulator.
+            This page is the definitive technical documentation for the Game Score Evolution Simulator. It covers the full mathematical model, all input fields, every solver formula with derivations, benchmarking methodology, analytics computation, convergence theory, stability concepts, system architecture, code implementation details, and API specification.
           </p>
           <p>
-            Use this as your definitive explanation sheet for viva and teacher discussion.
+            Use this as your authoritative reference for viva defense, code review, or deep understanding of the project's internals.
           </p>
         </div>
 
+        <!-- ═══════ SECTION 1 ═══════ -->
         <div class="section-card">
-          <h2>1. Core State and Model Variables</h2>
+          <h2>1. System Architecture — Request Lifecycle</h2>
+          <p>Every simulation follows this exact sequence from user action to rendered output:</p>
+          <div class="arch-flow">
+            <div class="arch-box">
+              <strong>1. Form Submission</strong>
+              <span>Browser sends POST to Flask with scenario, params, methods</span>
+            </div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-box">
+              <strong>2. Input Parsing</strong>
+              <span>app.py validates & type-casts with _float() and _int() helpers</span>
+            </div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-box">
+              <strong>3. Model Construction</strong>
+              <span>TeamDynamics + MatchParams dataclasses built from validated inputs</span>
+            </div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-box">
+              <strong>4. Reference Run</strong>
+              <span>RK4 with h/refinement step size for ground truth</span>
+            </div>
+          </div>
+          <div class="arch-flow" style="margin-top:4px;">
+            <div class="arch-box">
+              <strong>5. Method Loop</strong>
+              <span>Each selected solver runs with timing via perf_counter()</span>
+            </div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-box">
+              <strong>6. Benchmark Computation</strong>
+              <span>RMSE, final error, efficiency scored against reference</span>
+            </div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-box">
+              <strong>7. Analytics</strong>
+              <span>Winner, lead changes, volatility, comeback for each method</span>
+            </div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-box">
+              <strong>8. Template Rendering</strong>
+              <span>Jinja2 injects data into HTML; Chart.js builds charts</span>
+            </div>
+          </div>
+
+          <h3 style="margin-top:18px;">Key Implementation Details</h3>
+          <div class="detail-grid">
+            <div class="detail-card">
+              <h3>Type Safety</h3>
+              <p>The <code>_float()</code> and <code>_int()</code> helper functions wrap all form parsing with try/except fallback to default values. This prevents crashes from malformed inputs.</p>
+              <div class="code-block">
+<span class="kw">def</span> <span class="fn">_float</span>(form, key, default):
+    <span class="kw">try</span>:
+        <span class="kw">return</span> <span class="fn">float</span>(form.get(key, default))
+    <span class="kw">except</span> (TypeError, ValueError):
+        <span class="kw">return</span> default
+              </div>
+            </div>
+            <div class="detail-card">
+              <h3>Reference Sampling</h3>
+              <p>The reference RK4 runs at finer resolution (h/refinement, steps × refinement). To compare against coarse solutions, the reference is <strong>downsampled</strong> by picking every <em>refinement-th</em> point:</p>
+              <div class="code-block">
+<span class="kw">def</span> <span class="fn">_sample_reference</span>(series, refinement, count):
+    sampled = []
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(count):
+        idx = <span class="fn">min</span>(i * refinement, <span class="fn">len</span>(series) - <span class="nu">1</span>)
+        sampled.append(series[idx])
+    <span class="kw">return</span> sampled
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════ SECTION 2 ═══════ -->
+        <div class="section-card">
+          <h2>2. Core State Variable and Model Definition</h2>
           <p>
-            The simulator tracks two state variables over time: Team A score \(S_A(t)\) and Team B score \(S_B(t)\).
-            The state vector is:
+            The simulator tracks a 2D state vector over time, where each component represents one team's score:
           </p>
           <div class="formula-box">
-<pre>y(t) = [S_A(t), S_B(t)]</pre>
+            <span class="formula-label">State Vector</span>
+<pre>y(t) = [S_A(t), S_B(t)]
+
+S_A(t) = Team A score at time t    (non-negative real number)
+S_B(t) = Team B score at time t    (non-negative real number)
+
+Initial condition: y(0) = [S_A(0), S_B(0)]    (user-specified or preset)</pre>
           </div>
           <p>
-            The system is coupled: each derivative depends on both scores, not only its own team.
+            The system is a <strong>2-dimensional, first-order, autonomous-coupled, nonlinear ODE system</strong> with monotone constraints. Every numerical solver processes both components simultaneously at each step, maintaining the coupling relationship.
           </p>
         </div>
 
+        <!-- ═══════ SECTION 3 ═══════ -->
         <div class="section-card">
-          <h2>2. Full ODE Structure</h2>
+          <h2>3. Full ODE Structure — Complete Derivation</h2>
           <div class="formula-box">
-<pre>Lead difference: L = S_A - S_B
+            <span class="formula-label">Step 1 — Lead Difference</span>
+<pre>L = S_A − S_B
 
-Pressure terms:
-P_A = 1 - pressure_strength * L
-P_B = 1 + pressure_strength * L
-
-Saturation drive:
-Drive_i = attack_i * momentum_i * tempo * max(0.05, 1 - S_i / score_cap)
-
-Clutch oscillation:
-C_A(t) = clutch_A * sin(0.9 * t)
-C_B(t) = clutch_B * sin(0.9 * t + 1.1)
-
-Defensive drag:
-R_A = defense_B * coupling * S_A
-R_B = defense_A * coupling * S_B
-
-Final ODE rates:
-dS_A/dt = max(0, Drive_A * P_A + C_A(t) - R_A)
-dS_B/dt = max(0, Drive_B * P_B + C_B(t) - R_B)</pre>
+Interpretation: Positive L means Team A leads.
+               Negative L means Team B leads.
+               Zero means tied.</pre>
           </div>
-          <p>
-            The \(max(0, \cdot)\) clamp ensures the model does not produce negative scoring rates.
-          </p>
+
+          <div class="formula-box" style="margin-top:10px;">
+            <span class="formula-label">Step 2 — Pressure Response</span>
+<pre>P_A = 1 − pressure_strength × L
+P_B = 1 + pressure_strength × L
+
+When Team A leads (L > 0):
+  P_A < 1 (Team A slows down — complacency effect)
+  P_B > 1 (Team B speeds up — chase effect)
+
+When tied (L = 0):
+  P_A = P_B = 1 (no pressure bias)</pre>
+          </div>
+
+          <div class="formula-box" style="margin-top:10px;">
+            <span class="formula-label">Step 3 — Saturation Drive (per team)</span>
+<pre>saturation_i = max(0.05, 1 − S_i / score_cap)
+drive_i = attack_i × momentum_i × tempo × saturation_i
+
+The saturation factor creates a logarithmic-like growth curve:
+  At S_i = 0:        saturation = 1.0    (full power)
+  At S_i = cap/2:    saturation = 0.5    (half power)
+  At S_i = cap:      saturation = 0.05   (minimum power, not zero)
+
+This prevents unrealistic linear growth and models score-dependent difficulty.</pre>
+          </div>
+
+          <div class="formula-box" style="margin-top:10px;">
+            <span class="formula-label">Step 4 — Clutch Oscillation</span>
+<pre>C_A(t) = clutch_A × sin(0.9 × t)
+C_B(t) = clutch_B × sin(0.9 × t + 1.1)
+
+Properties:
+  Frequency:    0.9 rad/time_unit → period ≈ 2π/0.9 ≈ 6.98 time units
+  Amplitude:    bounded by clutch coefficient
+  Phase offset: 1.1 rad ≈ 63° between teams
+  Effect:       adds positive/negative bursts to scoring rate
+  Combined with max(0, ...): negative clutch can suppress scoring but not reverse it</pre>
+          </div>
+
+          <div class="formula-box" style="margin-top:10px;">
+            <span class="formula-label">Step 5 — Defensive Drag (cross-team)</span>
+<pre>R_A = defense_B × coupling × max(S_A, 0)
+R_B = defense_A × coupling × max(S_B, 0)
+
+Key properties:
+  - Proportional to current score (higher scores face more resistance)
+  - Uses OPPONENT's defense rating (Team B defends against Team A)
+  - Coupling parameter scales the interaction strength
+  - max(S, 0) prevents negative score from creating negative drag</pre>
+          </div>
+
+          <div class="formula-box" style="margin-top:10px;">
+            <span class="formula-label">Step 6 — Final ODE Assembly</span>
+<pre>dS_A/dt = max(0, drive_A × P_A + C_A(t) − R_A)
+dS_B/dt = max(0, drive_B × P_B + C_B(t) − R_B)
+
+The max(0, ...) clamp is applied to the ENTIRE expression, not individual terms.
+This means negative clutch or high drag can reduce the rate to zero but never below.
+Scores are monotonically non-decreasing by construction.</pre>
+          </div>
         </div>
 
+        <!-- ═══════ SECTION 4 ═══════ -->
         <div class="section-card">
-          <h2>3. Input Field Explanation (All Numeric Controls)</h2>
+          <h2>4. Input Field Reference — Complete Specification</h2>
           <table class="mini-table">
             <thead>
               <tr>
                 <th>Input Field</th>
+                <th>Type</th>
                 <th>Meaning</th>
                 <th>Numerical Effect</th>
+                <th>Typical Range</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td>Step Size (h)</td><td>Time increment per solver step</td><td>Smaller h improves accuracy, increases runtime.</td></tr>
-              <tr><td>Steps</td><td>Total number of integration steps</td><td>Total simulated horizon is approximately h * steps.</td></tr>
-              <tr><td>Benchmark Refinement</td><td>Reference RK4 step refinement factor</td><td>Reference step is h/refinement; larger gives stricter baseline.</td></tr>
-              <tr><td>Score Cap</td><td>Saturation threshold in drive term</td><td>Higher cap delays saturation, allowing larger late growth.</td></tr>
-              <tr><td>Tempo</td><td>Global match speed multiplier</td><td>Higher tempo scales both teams' drive upward.</td></tr>
-              <tr><td>Pressure Strength</td><td>Sensitivity to current lead difference</td><td>Higher values amplify front-runner/chaser pressure effects.</td></tr>
-              <tr><td>Defensive Coupling</td><td>Cross-team defensive suppression factor</td><td>Higher coupling reduces score growth for both teams.</td></tr>
-              <tr><td>Team A Initial</td><td>Initial score of Team A</td><td>Sets starting point; influences lead-dependent pressure immediately.</td></tr>
-              <tr><td>Team B Initial</td><td>Initial score of Team B</td><td>Same as above for Team B.</td></tr>
-              <tr><td>Attack (A/B)</td><td>Base offensive drive coefficient</td><td>Higher attack increases Drive_i and growth speed.</td></tr>
-              <tr><td>Defense (A/B)</td><td>Defensive resistance coefficient</td><td>Increases opponent drag through coupling term.</td></tr>
-              <tr><td>Momentum (A/B)</td><td>Rhythm/form multiplier</td><td>Scales drive continuously over the timeline.</td></tr>
-              <tr><td>Clutch (A/B)</td><td>Amplitude of periodic burst term</td><td>Creates stronger swings and comeback spikes.</td></tr>
+              <tr><td>Step Size (h)</td><td>float</td><td>Time increment per solver step</td><td>Smaller h → higher accuracy, more computation. Total time = h × steps.</td><td>0.05 – 0.2</td></tr>
+              <tr><td>Steps</td><td>int</td><td>Total integration steps (min 20)</td><td>More steps → longer simulation horizon. Total time = h × steps.</td><td>100 – 500</td></tr>
+              <tr><td>Benchmark Refinement</td><td>int</td><td>Reference RK4 refinement factor (min 2)</td><td>Reference step = h/refinement. Higher → stricter reference baseline.</td><td>3 – 10</td></tr>
+              <tr><td>Score Cap</td><td>float</td><td>Saturation threshold</td><td>Higher cap → delayed saturation → larger possible scores.</td><td>80 – 200</td></tr>
+              <tr><td>Tempo</td><td>float</td><td>Global match speed multiplier</td><td>Multiplies both teams' drive. Higher → faster overall scoring.</td><td>0.5 – 2.0</td></tr>
+              <tr><td>Pressure Strength</td><td>float</td><td>Sensitivity to lead difference</td><td>Higher → stronger rubber-banding (trailing team boosted more).</td><td>0.01 – 0.06</td></tr>
+              <tr><td>Defensive Coupling</td><td>float</td><td>Cross-team defensive factor</td><td>Higher → more defensive suppression for both teams → lower scores.</td><td>0.01 – 0.05</td></tr>
+              <tr><td>Team A Initial</td><td>float</td><td>Starting score for Team A</td><td>Non-zero values create immediate lead/pressure differential.</td><td>0 – 20</td></tr>
+              <tr><td>Team B Initial</td><td>float</td><td>Starting score for Team B</td><td>Same as above for Team B.</td><td>0 – 20</td></tr>
+              <tr><td>Attack (A/B)</td><td>float</td><td>Offensive drive coefficient</td><td>Higher → faster base scoring rate for that team.</td><td>0.8 – 2.0</td></tr>
+              <tr><td>Defense (A/B)</td><td>float</td><td>Defensive resistance coefficient</td><td>Increases OPPONENT's drag. Higher = harder for opponent to score.</td><td>0.5 – 1.5</td></tr>
+              <tr><td>Momentum (A/B)</td><td>float</td><td>Rhythm/form multiplier</td><td>Scales drive continuously. Can represent fatigue (< 1) or hot streak (> 1).</td><td>0.5 – 1.5</td></tr>
+              <tr><td>Clutch (A/B)</td><td>float</td><td>Periodic burst amplitude</td><td>Higher → stronger momentum swings and scoring runs.</td><td>0.1 – 0.5</td></tr>
             </tbody>
           </table>
         </div>
 
+        <!-- ═══════ SECTION 5 ═══════ -->
         <div class="section-card">
-          <h2>4. Numerical Methods and Update Formulas</h2>
-          <p>For each method, y_n is the state at step n and f(t, y) is the ODE derivative.</p>
+          <h2>5. Numerical Methods — Formulas and Implementation</h2>
+          <p>For all methods below: <code>f(t, y)</code> is the ODE derivative function returning <code>(dS_A/dt, dS_B/dt)</code>, and states are clipped to non-negative after each step via <code>_clip_state(y) = (max(0, y[0]), max(0, y[1]))</code>.</p>
 
-          <h3>Euler (1st order)</h3>
+          <h3>5.1 Euler (1st order, 1 evaluation/step)</h3>
           <div class="formula-box">
-<pre>y_{n+1} = y_n + h * f(t_n, y_n)</pre>
+            <span class="formula-label">Update Formula</span>
+<pre>y_{n+1} = y_n + h × f(t_n, y_n)</pre>
           </div>
+          <div class="code-block">
+<span class="cm"># Implementation (methods.py)</span>
+<span class="kw">def</span> <span class="fn">_euler_step</span>(f, t, y, h):
+    dy = f(t, y)
+    <span class="kw">return</span> y[<span class="nu">0</span>] + h * dy[<span class="nu">0</span>], y[<span class="nu">1</span>] + h * dy[<span class="nu">1</span>]
+          </div>
+          <p><strong>Local truncation error:</strong> O(h²). <strong>Global error:</strong> O(h). The method is derived from the first two terms of the Taylor expansion: y(t+h) = y(t) + h·y'(t) + O(h²).</p>
 
-          <h3>Heun / Improved Euler (2nd order)</h3>
+          <h3>5.2 Heun / Improved Euler (2nd order, 2 evaluations/step)</h3>
           <div class="formula-box">
+            <span class="formula-label">Update Formula</span>
 <pre>k1 = f(t_n, y_n)
-y_predict = y_n + h * k1
+y_predict = y_n + h × k1
 k2 = f(t_n + h, y_predict)
-y_{n+1} = y_n + (h/2) * (k1 + k2)</pre>
+y_{n+1} = y_n + (h/2) × (k1 + k2)</pre>
           </div>
+          <div class="code-block">
+<span class="cm"># Implementation (methods.py)</span>
+<span class="kw">def</span> <span class="fn">_heun_step</span>(f, t, y, h):
+    k1 = f(t, y)
+    predictor = (y[<span class="nu">0</span>] + h * k1[<span class="nu">0</span>], y[<span class="nu">1</span>] + h * k1[<span class="nu">1</span>])
+    k2 = f(t + h, predictor)
+    <span class="kw">return</span> (
+        y[<span class="nu">0</span>] + (h / <span class="nu">2.0</span>) * (k1[<span class="nu">0</span>] + k2[<span class="nu">0</span>]),
+        y[<span class="nu">1</span>] + (h / <span class="nu">2.0</span>) * (k1[<span class="nu">1</span>] + k2[<span class="nu">1</span>]),
+    )
+          </div>
+          <p><strong>Derivation:</strong> Heun is equivalent to the trapezoidal rule for integration: ∫f ≈ (h/2)(f(a) + f(b)). The k1 is f at the start, k2 is f at the Euler-predicted end.</p>
 
-          <h3>Midpoint RK2 (2nd order)</h3>
+          <h3>5.3 Midpoint RK2 (2nd order, 2 evaluations/step)</h3>
           <div class="formula-box">
+            <span class="formula-label">Update Formula</span>
 <pre>k1 = f(t_n, y_n)
-k2 = f(t_n + h/2, y_n + (h/2) * k1)
-y_{n+1} = y_n + h * k2</pre>
+y_mid = y_n + (h/2) × k1
+k2 = f(t_n + h/2, y_mid)
+y_{n+1} = y_n + h × k2</pre>
           </div>
+          <div class="code-block">
+<span class="cm"># Implementation (methods.py)</span>
+<span class="kw">def</span> <span class="fn">_midpoint_step</span>(f, t, y, h):
+    k1 = f(t, y)
+    mid = (y[<span class="nu">0</span>] + <span class="nu">0.5</span> * h * k1[<span class="nu">0</span>], y[<span class="nu">1</span>] + <span class="nu">0.5</span> * h * k1[<span class="nu">1</span>])
+    k2 = f(t + h / <span class="nu">2.0</span>, mid)
+    <span class="kw">return</span> y[<span class="nu">0</span>] + h * k2[<span class="nu">0</span>], y[<span class="nu">1</span>] + h * k2[<span class="nu">1</span>]
+          </div>
+          <p><strong>Derivation:</strong> Equivalent to the midpoint rule for integration: ∫f ≈ h × f((a+b)/2). Uses the slope at the center of the interval for the full step.</p>
 
-          <h3>Ralston RK2 (optimized 2nd order)</h3>
+          <h3>5.4 Ralston RK2 (optimized 2nd order, 2 evaluations/step)</h3>
           <div class="formula-box">
+            <span class="formula-label">Update Formula</span>
 <pre>k1 = f(t_n, y_n)
-k2 = f(t_n + 3h/4, y_n + (3h/4) * k1)
-y_{n+1} = y_n + h * ((1/3) * k1 + (2/3) * k2)</pre>
+k2 = f(t_n + 3h/4, y_n + (3h/4) × k1)
+y_{n+1} = y_n + h × ((1/3) × k1 + (2/3) × k2)</pre>
           </div>
-
-          <h3>Adams-Bashforth 2 (explicit multistep)</h3>
-          <div class="formula-box">
-<pre>y_{n+1} = y_n + h * ( (3/2) * f_n - (1/2) * f_{n-1} )</pre>
+          <div class="code-block">
+<span class="cm"># Implementation (methods.py)</span>
+<span class="kw">def</span> <span class="fn">_ralston_step</span>(f, t, y, h):
+    k1 = f(t, y)
+    y2 = (y[<span class="nu">0</span>] + <span class="nu">0.75</span> * h * k1[<span class="nu">0</span>], y[<span class="nu">1</span>] + <span class="nu">0.75</span> * h * k1[<span class="nu">1</span>])
+    k2 = f(t + <span class="nu">0.75</span> * h, y2)
+    <span class="kw">return</span> (
+        y[<span class="nu">0</span>] + h * ((<span class="nu">1.0</span>/<span class="nu">3.0</span>) * k1[<span class="nu">0</span>] + (<span class="nu">2.0</span>/<span class="nu">3.0</span>) * k2[<span class="nu">0</span>]),
+        y[<span class="nu">1</span>] + h * ((<span class="nu">1.0</span>/<span class="nu">3.0</span>) * k1[<span class="nu">1</span>] + (<span class="nu">2.0</span>/<span class="nu">3.0</span>) * k2[<span class="nu">1</span>]),
+    )
           </div>
-          <p>AB2 requires one starting step; this implementation bootstraps with Heun.</p>
+          <p><strong>Optimization:</strong> The 1/3 and 2/3 weights, and the 3/4 evaluation point, are chosen to minimize the leading coefficient of the O(h³) truncation error term. The result is the same order as Heun and Midpoint but with a smaller error constant.</p>
 
-          <h3>RK4 (4th order)</h3>
+          <h3>5.5 Adams-Bashforth 2 (explicit multistep, 2nd order)</h3>
           <div class="formula-box">
+            <span class="formula-label">Update Formula</span>
+<pre>y_{n+1} = y_n + h × ((3/2) × f(t_n, y_n) − (1/2) × f(t_{n-1}, y_{n-1}))
+
+Bootstrapping: Step 0→1 uses Heun method
+Subsequent:    Steps 1→2, 2→3, ... use AB2 formula</pre>
+          </div>
+          <div class="code-block">
+<span class="cm"># Implementation (methods.py) — simplified logic</span>
+<span class="cm"># Bootstrap with Heun for first step</span>
+y1 = _clip_state(_heun_step(f, t0, y0, h))
+
+<span class="cm"># AB2 loop for remaining steps</span>
+<span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(<span class="nu">1</span>, steps):
+    fn = f(t, curr)
+    fnm1 = f(t - h, prev)
+    next_y = (
+        curr[<span class="nu">0</span>] + h * (<span class="nu">1.5</span> * fn[<span class="nu">0</span>] - <span class="nu">0.5</span> * fnm1[<span class="nu">0</span>]),
+        curr[<span class="nu">1</span>] + h * (<span class="nu">1.5</span> * fn[<span class="nu">1</span>] - <span class="nu">0.5</span> * fnm1[<span class="nu">1</span>]),
+    )
+    prev, curr = curr, _clip_state(next_y)
+          </div>
+          <p><strong>Derivation:</strong> AB2 approximates the integral ∫f dt by fitting a polynomial through the two most recent derivative values and extrapolating. The coefficients 3/2 and −1/2 come from the Lagrange interpolating polynomial.</p>
+          <p><strong>Key advantage:</strong> Only 1 new function evaluation per step (it reuses the stored previous derivative). Key disadvantage: requires a startup step and can have stability limitations compared to single-step methods.</p>
+
+          <h3>5.6 Runge-Kutta 4 (4th order, 4 evaluations/step)</h3>
+          <div class="formula-box">
+            <span class="formula-label">Update Formula</span>
 <pre>k1 = f(t_n, y_n)
-k2 = f(t_n + h/2, y_n + (h/2) * k1)
-k3 = f(t_n + h/2, y_n + (h/2) * k2)
-k4 = f(t_n + h, y_n + h * k3)
+k2 = f(t_n + h/2, y_n + (h/2) × k1)
+k3 = f(t_n + h/2, y_n + (h/2) × k2)
+k4 = f(t_n + h, y_n + h × k3)
 
-y_{n+1} = y_n + (h/6) * (k1 + 2k2 + 2k3 + k4)</pre>
+y_{n+1} = y_n + (h/6) × (k1 + 2k2 + 2k3 + k4)</pre>
+          </div>
+          <div class="code-block">
+<span class="cm"># Implementation (methods.py)</span>
+<span class="kw">def</span> <span class="fn">_rk4_step</span>(f, t, y, h):
+    k1 = f(t, y)
+    k2 = f(t + h/<span class="nu">2.0</span>, (y[<span class="nu">0</span>] + h*k1[<span class="nu">0</span>]/<span class="nu">2.0</span>, y[<span class="nu">1</span>] + h*k1[<span class="nu">1</span>]/<span class="nu">2.0</span>))
+    k3 = f(t + h/<span class="nu">2.0</span>, (y[<span class="nu">0</span>] + h*k2[<span class="nu">0</span>]/<span class="nu">2.0</span>, y[<span class="nu">1</span>] + h*k2[<span class="nu">1</span>]/<span class="nu">2.0</span>))
+    k4 = f(t + h, (y[<span class="nu">0</span>] + h*k3[<span class="nu">0</span>], y[<span class="nu">1</span>] + h*k3[<span class="nu">1</span>]))
+    <span class="kw">return</span> (
+        y[<span class="nu">0</span>] + (h/<span class="nu">6.0</span>) * (k1[<span class="nu">0</span>] + <span class="nu">2.0</span>*k2[<span class="nu">0</span>] + <span class="nu">2.0</span>*k3[<span class="nu">0</span>] + k4[<span class="nu">0</span>]),
+        y[<span class="nu">1</span>] + (h/<span class="nu">6.0</span>) * (k1[<span class="nu">1</span>] + <span class="nu">2.0</span>*k2[<span class="nu">1</span>] + <span class="nu">2.0</span>*k3[<span class="nu">1</span>] + k4[<span class="nu">1</span>]),
+    )
+          </div>
+          <p><strong>Derivation:</strong> RK4 is derived from matching the Taylor expansion through the h⁴ term. The 1:2:2:1 weights and the specific evaluation points are chosen so that the method agrees with the Taylor series through O(h⁵), giving O(h⁴) global error.</p>
+          <p><strong>Why it's the reference:</strong> With 4th-order accuracy, RK4 is the most precise method in this collection. Using it at h/refinement step size gives an even more accurate trajectory that serves as ground truth for benchmarking.</p>
+        </div>
+
+        <!-- ═══════ SECTION 6 ═══════ -->
+        <div class="section-card">
+          <h2>6. Convergence Analysis — Order of Accuracy Theory</h2>
+          <p>The <strong>order of accuracy</strong> of a numerical method describes how quickly its error decreases when the step size h is reduced:</p>
+          <div class="formula-box">
+            <span class="formula-label">Error Scaling Laws</span>
+<pre>Local Truncation Error (per step):
+  Euler:      LTE = O(h²)     — error per step scales as h²
+  Heun/RK2:   LTE = O(h³)     — scales as h³
+  RK4:        LTE = O(h⁵)     — scales as h⁵
+
+Global Error (accumulated over N = T/h steps):
+  Euler:      GE = O(h)       — first-order convergence
+  Heun/RK2:   GE = O(h²)      — second-order convergence
+  RK4:        GE = O(h⁴)      — fourth-order convergence
+
+Practical implication — halving h:
+  Euler:      error halves           (factor 2)
+  Heun/RK2:   error quarters         (factor 4)
+  RK4:        error reduces by 16×   (factor 16)</pre>
+          </div>
+          <div class="callout note">
+            <div class="callout-icon">📐</div>
+            <div class="callout-body">
+              <strong>Why global error is one order less than local</strong>
+              <p>Local error accumulates over N = T/h steps. If LTE = O(h^{p+1}) per step, then after N = T/h steps: Global Error = N × LTE = (T/h) × O(h^{p+1}) = O(h^p). This is why Euler has O(h²) local but O(h) global error.</p>
+            </div>
+          </div>
+          <h3>Practical Convergence in This Project</h3>
+          <p>You can verify convergence by running the simulator with different step sizes and observing how RMSE changes:</p>
+          <table class="mini-table">
+            <thead>
+              <tr>
+                <th>Method</th>
+                <th>h = 0.2</th>
+                <th>h = 0.1 (half)</th>
+                <th>Expected Ratio</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Euler (O(h))</td><td>RMSE₁</td><td>≈ RMSE₁ / 2</td><td>2:1</td></tr>
+              <tr><td>Heun (O(h²))</td><td>RMSE₂</td><td>≈ RMSE₂ / 4</td><td>4:1</td></tr>
+              <tr><td>RK4 (O(h⁴))</td><td>RMSE₃</td><td>≈ RMSE₃ / 16</td><td>16:1</td></tr>
+            </tbody>
+          </table>
+          <p>If your benchmark data shows approximately these ratios, it confirms the theoretical convergence orders of the implemented methods.</p>
+        </div>
+
+        <!-- ═══════ SECTION 7 ═══════ -->
+        <div class="section-card">
+          <h2>7. Stability Concepts</h2>
+          <p><strong>Stability</strong> determines whether errors grow or decay as the method iterates. An unstable method will produce results that diverge wildly even if the true solution is bounded.</p>
+          <div class="detail-grid">
+            <div class="detail-card">
+              <h3>What is a Stability Region?</h3>
+              <p>For a test equation dy/dt = λy, a method is stable when h × λ falls within its <strong>stability region</strong> in the complex plane. Outside this region, numerical errors amplify exponentially.</p>
+              <p>For this project's ODE, the effective "λ" varies over time (due to nonlinearity), but the key insight is: <strong>if you make h too large, any method can become unstable</strong>.</p>
+            </div>
+            <div class="detail-card">
+              <h3>Why This Matters Here</h3>
+              <p>Our ODE has bounded derivatives (due to saturation and max(0,...)), so stability is generally not a critical issue with reasonable step sizes (h ≤ 0.2). However, if a user sets very large h with high attack coefficients, Euler might overshoot while RK4 remains stable due to its larger stability region.</p>
+              <p>This is another advantage of higher-order methods: they typically have larger stability regions, allowing bigger step sizes without instability.</p>
+            </div>
+          </div>
+          <div class="callout tip">
+            <div class="callout-icon">💡</div>
+            <div class="callout-body">
+              <strong>Viva tip</strong>
+              <p>If asked about stiff ODEs: this model is NOT stiff because all terms are bounded and the effective eigenvalues of the Jacobian are moderate. Stiff ODEs require implicit methods (like backward Euler or BDF) which this project does not implement — that would be a valid future enhancement.</p>
+            </div>
           </div>
         </div>
 
+        <!-- ═══════ SECTION 8 ═══════ -->
         <div class="section-card">
-          <h2>5. Benchmark Metrics and Equations</h2>
-          <p>
-            Each selected method is evaluated against a fine-step RK4 reference trajectory.
-          </p>
+          <h2>8. Adams-Bashforth 2 — Detailed Analysis</h2>
+          <p>AB2 deserves special attention because it's fundamentally different from the single-step Runge-Kutta family:</p>
+          <div class="detail-grid">
+            <div class="detail-card">
+              <h3>How Multistep Methods Work</h3>
+              <p>Instead of evaluating f multiple times at the current step (like RK methods), multistep methods evaluate f once but combine it with stored values from previous steps. AB2 uses:</p>
+              <div class="formula-box">
+<pre>y_{n+1} = y_n + h × ((3/2)f_n − (1/2)f_{n-1})
 
-          <h3>Final-score absolute error</h3>
-          <div class="formula-box">
-<pre>Error_A = |S_A^{method}(T) - S_A^{ref}(T)|
-Error_B = |S_B^{method}(T) - S_B^{ref}(T)|</pre>
+This is a linear combination of:
+  f_n     = derivative at current step    (weight: +3/2)
+  f_{n-1} = derivative at previous step   (weight: -1/2)</pre>
+              </div>
+              <p>The coefficients 3/2 and −1/2 come from fitting a linear interpolating polynomial through (t_{n-1}, f_{n-1}) and (t_n, f_n), then extrapolating forward to t_{n+1}.</p>
+            </div>
+            <div class="detail-card">
+              <h3>Bootstrap Requirement</h3>
+              <p>AB2 needs two starting points (y₀ and y₁) but is only given y₀. The implementation bootstraps by using <strong>Heun's method</strong> for the first step, providing y₁ with 2nd-order accuracy. All subsequent steps use the AB2 formula.</p>
+              <p><strong>Why Heun for bootstrap?</strong> Because it matches AB2's 2nd-order accuracy. Using Euler (1st order) for the bootstrap step would introduce a 1st-order error that contaminates the entire solution.</p>
+            </div>
           </div>
-
-          <h3>Trajectory RMSE</h3>
-          <div class="formula-box">
-<pre>RMSE = sqrt( (1/(2N)) * sum_{i=1..N} [ (A_i - A_i_ref)^2 + (B_i - B_i_ref)^2 ] )</pre>
+          <div class="detail-grid" style="margin-top:12px;">
+            <div class="detail-card">
+              <h3>Advantages over RK2 Methods</h3>
+              <ul>
+                <li><strong>Cost:</strong> Only 1 new function evaluation per step (Heun/Midpoint need 2)</li>
+                <li><strong>Efficiency:</strong> For long simulations, the reduced evaluation count saves significant time</li>
+                <li><strong>Memory:</strong> Only needs to store one previous derivative value</li>
+              </ul>
+            </div>
+            <div class="detail-card">
+              <h3>Disadvantages</h3>
+              <ul>
+                <li><strong>Cannot self-start:</strong> Requires a separate method for the first step</li>
+                <li><strong>Smaller stability region:</strong> More susceptible to instability than some RK methods</li>
+                <li><strong>Startup error:</strong> Bootstrap step quality affects all subsequent steps</li>
+                <li><strong>Not self-correcting:</strong> Unlike predictor-corrector methods, AB2 doesn't check its own accuracy</li>
+              </ul>
+            </div>
           </div>
-
-          <h3>Efficiency score</h3>
-          <div class="formula-box">
-<pre>Efficiency = 1 / ((RMSE + epsilon) * (runtime_ms + epsilon))</pre>
-          </div>
-          <p>
-            Higher efficiency means better speed-accuracy balance.
-          </p>
         </div>
 
+        <!-- ═══════ SECTION 9 ═══════ -->
         <div class="section-card">
-          <h2>6. Gameplay Analytics Metrics</h2>
+          <h2>9. Benchmark Metrics — Complete Specification</h2>
+          <p>Each method is evaluated with five quantitative metrics:</p>
+
+          <h3>9.1 Final-Score Absolute Error</h3>
+          <div class="formula-box">
+<pre>Error_A = |S_A^{method}(T) − S_A^{ref}(T)|
+Error_B = |S_B^{method}(T) − S_B^{ref}(T)|
+
+T = total simulation time = h × steps</pre>
+          </div>
+          <p>Simple to compute and understand, but insufficient alone — a method could accumulate significant mid-trajectory error that cancels by the end.</p>
+
+          <h3>9.2 Trajectory RMSE</h3>
+          <div class="formula-box">
+<pre>RMSE = √( (1/(2N)) × Σ_{i=0}^{N} [ (A_i − A_i^{ref})² + (B_i − B_i^{ref})² ] )
+
+where N = total number of comparison points (steps + 1)
+factor of 2N: divides by 2 because there are 2 state variables</pre>
+          </div>
+          <p>This is the primary accuracy metric. It measures the average path deviation over the entire simulation, capturing mid-trajectory drift that final-score error misses.</p>
+
+          <h3>9.3 Runtime</h3>
+          <div class="formula-box">
+<pre>start = perf_counter()
+result = solver(derivative, t0, initial_state, h, steps)
+runtime_ms = (perf_counter() − start) × 1000.0</pre>
+          </div>
+          <p>Wall-clock time in milliseconds. Uses Python's <code>perf_counter()</code> for maximum precision. Note: runtime can vary between runs due to OS scheduling; the values are indicative, not exact.</p>
+
+          <h3>9.4 Efficiency Score</h3>
+          <div class="formula-box">
+<pre>Efficiency = 1 / ((RMSE + ε) × (runtime_ms + ε))
+
+where ε = 1×10⁻⁶ (prevents division by zero)</pre>
+          </div>
+          <p>Higher = better. A method that is both fast and accurate will have a high efficiency score. This single metric captures the speed-accuracy trade-off that is central to numerical method selection.</p>
+
+          <h3>9.5 Best-of Rankings</h3>
+          <p>After computing all metrics, the system identifies:</p>
+          <ul>
+            <li><strong>Best accuracy:</strong> Method with lowest trajectory_rmse</li>
+            <li><strong>Fastest:</strong> Method with lowest runtime_ms</li>
+            <li><strong>Best efficiency:</strong> Method with highest efficiency_score</li>
+          </ul>
+        </div>
+
+        <!-- ═══════ SECTION 10 ═══════ -->
+        <div class="section-card">
+          <h2>10. Gameplay Analytics Metrics</h2>
+          <p>Beyond numerical accuracy, the simulator computes game-specific analytics for each method's output:</p>
           <table class="mini-table">
             <thead>
               <tr>
                 <th>Metric</th>
-                <th>Definition</th>
+                <th>Formula / Logic</th>
                 <th>Interpretation</th>
+                <th>What It Reveals</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td>Final Scores</td><td>End scores of Team A and Team B</td><td>Outcome summary of each method run.</td></tr>
-              <tr><td>Winner</td><td>Team with higher final score</td><td>Simple result category: A, B, or Draw.</td></tr>
-              <tr><td>Lead Changes</td><td>Sign flips in score difference over time</td><td>How dynamic/competitive the match was.</td></tr>
-              <tr><td>Avg Total Scoring Rate</td><td>(Total(T)-Total(0)) / (T-0)</td><td>Pace indicator for the whole match.</td></tr>
-              <tr><td>Volatility Index</td><td>std(total score) / mean(total score)</td><td>Relative fluctuation intensity.</td></tr>
-              <tr><td>Comeback Index</td><td>Max prior deficit normalized by winner score</td><td>How strong the comeback behavior was.</td></tr>
+              <tr>
+                <td><strong>Final Scores</strong></td>
+                <td>S_A[-1], S_B[-1]</td>
+                <td>End-of-match score for each team</td>
+                <td>Whether methods agree on the outcome</td>
+              </tr>
+              <tr>
+                <td><strong>Winner</strong></td>
+                <td>Compare final scores: A > B → Team A; B > A → Team B; else Draw</td>
+                <td>Match result determination</td>
+                <td>If different methods produce different winners, solver choice affects the predicted outcome</td>
+              </tr>
+              <tr>
+                <td><strong>Lead Changes</strong></td>
+                <td>Count sign flips in (S_A[i] − S_B[i]) over all time steps</td>
+                <td>Number of competitive lead reversals</td>
+                <td>Higher = more dynamic, competitive match. Reveals coupling effectiveness.</td>
+              </tr>
+              <tr>
+                <td><strong>Avg Total Scoring Rate</strong></td>
+                <td>(total[-1] − total[0]) / T, where total = S_A + S_B</td>
+                <td>Average points per time unit for both teams combined</td>
+                <td>Overall match pace indicator. Higher = faster-paced game.</td>
+              </tr>
+              <tr>
+                <td><strong>Volatility Index</strong></td>
+                <td>pstdev(total_scores) / mean(total_scores)</td>
+                <td>Coefficient of variation for total scoring</td>
+                <td>Relative fluctuation intensity. Higher = more unpredictable scoring patterns.</td>
+              </tr>
+              <tr>
+                <td><strong>Comeback Index</strong></td>
+                <td>max_deficit_suffered_by_winner / winner_final_score</td>
+                <td>How big a deficit the winner overcame</td>
+                <td>Values near 1.0 indicate dramatic comeback. 0 means the winner always led.</td>
+              </tr>
             </tbody>
           </table>
         </div>
 
+        <!-- ═══════ SECTION 11 ═══════ -->
         <div class="section-card">
-          <h2>7. Scenario Presets and Their Purpose</h2>
-          <p>
-            Presets are parameter bundles for rapid experimentation. They keep the model fixed while changing coefficients to represent different game styles.
-          </p>
+          <h2>11. Scenario Presets — Parameter Tables</h2>
+          <p>Each preset is a parameter bundle. The ODE structure is identical; only coefficient values change.</p>
+          {% for key, scenario in scenario_presets.items() %}
+          <h3>{{ scenario.name }}</h3>
+          <p><em>{{ scenario.description }}</em></p>
           <table class="mini-table">
             <thead>
-              <tr>
-                <th>Scenario</th>
-                <th>Primary Characteristic</th>
-                <th>Best Use in Demo</th>
-              </tr>
+              <tr><th>Parameter</th><th>Value</th></tr>
             </thead>
             <tbody>
-              {% for key, scenario in scenario_presets.items() %}
-              <tr>
-                <td>{{ scenario.name }}</td>
-                <td>{{ scenario.description }}</td>
-                <td>
-                  {% if key == 'balanced_classic' %}Baseline method comparison.{% elif key == 'high_scoring_arena' %}Show high-tempo growth and solver spread.{% elif key == 'defensive_grind' %}Show low-growth tactical dynamics.{% else %}Show pressure and comeback behavior.{% endif %}
-                </td>
-              </tr>
+              {% for param_name, param_value in scenario['values'].items() %}
+              <tr><td>{{ param_name }}</td><td>{{ param_value }}</td></tr>
               {% endfor %}
             </tbody>
           </table>
+          {% endfor %}
         </div>
 
+        <!-- ═══════ SECTION 12 ═══════ -->
         <div class="section-card">
-          <h2>8. Implementation Details (Code Architecture)</h2>
-          <ul>
-            <li><strong>Model:</strong> ODE definitions and team/match parameter classes in game_score_evolution/model.py</li>
-            <li><strong>Solvers:</strong> all numerical methods in game_score_evolution/methods.py</li>
-            <li><strong>Analytics:</strong> gameplay metrics and RMSE helper in game_score_evolution/analytics.py</li>
-            <li><strong>Backend:</strong> request parsing, scenario defaults, simulation loop, benchmark generation in app.py</li>
-            <li><strong>Frontend:</strong> controls, scenario cards, method cards, chart rendering in templates/index.html and static/app.js</li>
-            <li><strong>Presentation pages:</strong> teacher-facing and student-facing explainers in templates/presentation.html and templates/study_guide.html</li>
-          </ul>
+          <h2>12. Code Architecture — Module Reference</h2>
+          <div class="step-flow">
+            <div class="step-item">
+              <div class="step-body">
+                <h4>game_score_evolution/__init__.py</h4>
+                <p>Package initializer. Exposes the module as an importable package for use in app.py.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-body">
+                <h4>game_score_evolution/model.py (69 lines)</h4>
+                <p><strong>Classes:</strong> <code>TeamDynamics</code> (4 fields: attack, defense, momentum, clutch), <code>MatchParams</code> (team_a, team_b, score_cap, tempo, pressure_strength, coupling).</p>
+                <p><strong>Functions:</strong> <code>_drive_term()</code> computes saturation-limited offensive drive. <code>score_derivatives()</code> is the main ODE function — takes time t, state tuple, MatchParams; returns (dS_A/dt, dS_B/dt).</p>
+                <p><strong>Design choice:</strong> Uses <code>functools.partial</code> in app.py to bind MatchParams into the derivative function, creating a standard f(t, y) signature for all solvers.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-body">
+                <h4>game_score_evolution/methods.py (146 lines)</h4>
+                <p><strong>Type aliases:</strong> <code>State = tuple[float, float]</code>, <code>DerivativeFn = Callable[[float, State], State]</code>.</p>
+                <p><strong>Results class:</strong> <code>SimulationResult</code> with method name, time array, score_a array, score_b array.</p>
+                <p><strong>Helper:</strong> <code>_clip_state()</code> enforces non-negative scores. <code>_integrate()</code> is the common time-stepping loop shared by all single-step methods.</p>
+                <p><strong>Methods:</strong> 5 static step functions + 1 special AB2 implementation. All are collected under the <code>NumericalMethods</code> class for organized access.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-body">
+                <h4>game_score_evolution/analytics.py (100 lines)</h4>
+                <p><strong>Data classes:</strong> <code>MatchAnalytics</code> (7 fields), <code>BenchmarkMetrics</code> (6 fields).</p>
+                <p><strong>Functions:</strong> <code>_count_lead_changes()</code> tracks sign flips in score difference. <code>_comeback_index()</code> computes normalized deficit recovery. <code>summarize()</code> produces MatchAnalytics from a SimulationResult. <code>trajectory_rmse()</code> computes path RMSE.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-body">
+                <h4>app.py (361 lines)</h4>
+                <p><strong>Constants:</strong> SCENARIO_PRESETS (4 scenarios with all parameter values), METHOD_CATALOG (6 method descriptors for UI).</p>
+                <p><strong>Helpers:</strong> <code>_float()</code>, <code>_int()</code> for safe form parsing. <code>_sample_reference()</code> for downsampling. <code>_scenario_key()</code> and <code>_get_method_ids()</code> for input extraction.</p>
+                <p><strong>Core:</strong> <code>simulate()</code> orchestrates the entire pipeline. <strong>Routes:</strong> 4 endpoints (/, /presentation, /study-guide, /technical-reference), each calling simulate() and rendering a template.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-body">
+                <h4>static/app.js (203 lines)</h4>
+                <p><strong>Interactivity:</strong> Scenario card click handler (updates form values + active state), method card checkbox toggle.</p>
+                <p><strong>Chart.js:</strong> Score evolution line chart (dynamic datasets per method, color-hashed by name). Benchmark dual-axis mixed chart (bar for runtime, line for RMSE).</p>
+                <p><strong>Animation:</strong> Staggered fade-in for chart elements using CSS transitions triggered by setTimeout.</p>
+              </div>
+            </div>
+          </div>
         </div>
 
+        <!-- ═══════ SECTION 13 ═══════ -->
         <div class="section-card">
-          <h2>9. Practical Interpretation for Viva</h2>
-          <ol>
-            <li>Start with model logic: explain why ODEs are needed.</li>
-            <li>Explain each input as a coefficient that changes trajectory shape.</li>
-            <li>Run at least two methods and compare trajectory differences.</li>
-            <li>Use benchmark chart to justify speed-versus-accuracy tradeoff.</li>
-            <li>Use scenario presets to prove model flexibility.</li>
-            <li>Conclude that solver selection depends on fidelity requirement and runtime budget.</li>
-          </ol>
+          <h2>13. API Reference — Routes and Parameters</h2>
+          <table class="mini-table">
+            <thead>
+              <tr>
+                <th>Route</th>
+                <th>Methods</th>
+                <th>Description</th>
+                <th>Template</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>/</code></td>
+                <td>GET, POST</td>
+                <td>Main simulator page. GET uses query params; POST uses form body. Runs full simulation and renders interactive dashboard.</td>
+                <td>index.html</td>
+              </tr>
+              <tr>
+                <td><code>/presentation</code></td>
+                <td>GET</td>
+                <td>16-slide presentation deck with speaker notes and live benchmark data. Uses query params for simulation.</td>
+                <td>presentation.html</td>
+              </tr>
+              <tr>
+                <td><code>/study-guide</code></td>
+                <td>GET</td>
+                <td>16-section study guide with deep explanations, worked examples, and viva preparation.</td>
+                <td>study_guide.html</td>
+              </tr>
+              <tr>
+                <td><code>/technical-reference</code></td>
+                <td>GET</td>
+                <td>14-section technical documentation with formulas, code, convergence analysis, and API spec.</td>
+                <td>technical_reference.html</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h3>Template Context Variables</h3>
+          <p>All four routes inject the same context via <code>simulate()</code>:</p>
+          <table class="mini-table">
+            <thead>
+              <tr><th>Variable</th><th>Type</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>simulations</code></td><td>list[dict]</td><td>Each entry: {method, times[], score_a[], score_b[]}</td></tr>
+              <tr><td><code>analytics</code></td><td>list[MatchAnalytics]</td><td>Game metrics per method</td></tr>
+              <tr><td><code>benchmarks</code></td><td>list[BenchmarkMetrics]</td><td>Performance metrics per method</td></tr>
+              <tr><td><code>benchmark_summary</code></td><td>dict</td><td>{best_accuracy, fastest, best_efficiency, reference_method}</td></tr>
+              <tr><td><code>inputs</code></td><td>dict</td><td>All parsed parameters including scenario, methods list</td></tr>
+              <tr><td><code>scenario_presets</code></td><td>dict</td><td>All 4 scenario definitions with parameter values</td></tr>
+              <tr><td><code>method_catalog</code></td><td>list[dict]</td><td>Method metadata: id, label, order, description</td></tr>
+            </tbody>
+          </table>
         </div>
+
+        <!-- ═══════ SECTION 14 ═══════ -->
+        <div class="section-card">
+          <h2>14. Comprehensive Viva Reference</h2>
+          <p>A structured approach to defending this project in an academic evaluation:</p>
+          <div class="step-flow">
+            <div class="step-item">
+              <div class="step-body">
+                <h4>Start with the "Why"</h4>
+                <p>Explain why ODEs are needed: game scoring is continuous, interactive, and nonlinear. Simple formulas can't capture feedback loops. Numerical methods let us compute trajectories when no closed-form solution exists.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-body">
+                <h4>Walk Through the Model</h4>
+                <p>Explain each ODE term: drive (offensive engine), pressure (competitive adjustment), clutch (periodic bursts), drag (defensive damping). Emphasize coupling and the max(0) constraint.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-body">
+                <h4>Name and Describe Each Solver</h4>
+                <p>For each of the 6 methods, give a one-sentence description and state its order. Explain that higher order means faster error reduction when h decreases.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-body">
+                <h4>Show Benchmark Results</h4>
+                <p>Point to RMSE, runtime, and efficiency. Identify which method wins each category. Discuss the trade-off: fastest isn't most accurate, and most accurate isn't most efficient.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-body">
+                <h4>Demonstrate Scenarios</h4>
+                <p>Switch between presets to show model flexibility. Point out how coefficient changes produce different trajectories without structural code changes.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-body">
+                <h4>Address Limitations Head-On</h4>
+                <p>Acknowledge: deterministic (no randomness), fixed parameters, single-frequency clutch, no adaptive stepping. Then state potential improvements: SDEs, RKF45, time-varying params.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-body">
+                <h4>Conclude with the Core Insight</h4>
+                <p>"Solver choice affects not just accuracy and speed, but potentially the predicted match outcome itself. This project demonstrates that numerical method selection is a consequential engineering decision."</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </section>
     </section>
   </main>

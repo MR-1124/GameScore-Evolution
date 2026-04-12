@@ -18,6 +18,7 @@
         <div class="stat-stack">
           <a class="page-link" href="{{ url_for('index') }}">Back to Simulator</a>
           <a class="page-link" href="{{ url_for('presentation') }}">Presentation Page</a>
+          <a class="page-link" href="{{ url_for('technical_reference') }}">Technical Reference</a>
           <div class="stat-pill">
             <strong>Selected Scenario</strong>
             <span>{{ inputs.scenario }}</span>
@@ -26,154 +27,678 @@
             <strong>Reference Baseline</strong>
             <span>{{ benchmark_summary.reference_method }}</span>
           </div>
+          <div class="stat-pill">
+            <strong>Methods Implemented</strong>
+            <span>{{ method_catalog|length }}</span>
+          </div>
+          <div class="stat-pill">
+            <strong>Step Size</strong>
+            <span>h = {{ inputs.step_size }}</span>
+          </div>
         </div>
       </aside>
 
       <section class="report-main">
         <div class="report-hero">
-          <h1>Study Guide for Viva and Teacher Explanation</h1>
+          <h1>Complete Study Guide — Viva & Exam Preparation</h1>
           <p>
-            Use this page as your preparation sheet. It is written to help you explain the project confidently, step by step, with enough depth to answer follow-up questions.
+            This guide is your complete preparation sheet for understanding, explaining, and defending this project. Every section is written to give you deep understanding — not just surface-level answers. Read it thoroughly, practice saying the key phrases aloud, and use the worked examples to build real confidence.
           </p>
         </div>
 
+        <!-- ═══════ SECTION 1 ═══════ -->
         <div class="section-card">
-          <h2>1. One-Minute Introduction</h2>
+          <h2>1. Project Overview — What Is This Project?</h2>
           <p>
-            “My project is called Game Score Evolution Simulator. It uses ordinary differential equations to model how two teams’ scores change over time. I compare several numerical methods such as Euler, Heun, Midpoint, Ralston, Adams-Bashforth 2, and RK4. The goal is to show how different solvers affect accuracy, runtime, and the realism of score prediction.”
+            The <strong>Game Score Evolution Simulator</strong> is a Python-based web application that models how two competing teams' scores change over time during a match. Instead of using a simple formula like "Team A scores 2 points per minute," this project treats scores as <strong>continuously evolving quantities</strong> governed by a system of <strong>coupled Ordinary Differential Equations (ODEs)</strong>.
           </p>
-        </div>
-
-        <div class="section-card">
-          <h2>2. Core Concept to Remember</h2>
+          <p>
+            The project has two main academic objectives:
+          </p>
           <div class="detail-grid">
             <div class="detail-card">
-              <h3>Main mathematical idea</h3>
-              <p>The model uses coupled ODEs because each team’s scoring rate affects the other team’s score evolution.</p>
+              <h3>Objective 1: Mathematical Modeling</h3>
+              <p>Build a realistic ODE model that captures attack, defense, momentum, competitive pressure, clutch bursts, and score saturation. The model must produce trajectories that look like plausible game progressions.</p>
             </div>
             <div class="detail-card">
-              <h3>Why ODEs</h3>
-              <p>ODEs are suitable because score changes continuously with time, and we want a trajectory instead of only a final result.</p>
+              <h3>Objective 2: Numerical Method Comparison</h3>
+              <p>Implement six different numerical solvers (Euler, Heun, Midpoint, Ralston, Adams-Bashforth 2, RK4) from scratch and compare them on accuracy, runtime, and efficiency using the same ODE model.</p>
+            </div>
+          </div>
+          <div class="say-box">
+            <p>"My project models competitive game scoring as a dynamic system using coupled ODEs. I implemented six numerical methods to solve the system and benchmarked them against each other to study the accuracy-versus-speed trade-off in numerical analysis."</p>
+          </div>
+        </div>
+
+        <!-- ═══════ SECTION 2 ═══════ -->
+        <div class="section-card">
+          <h2>2. Why This Project Matters — Academic Significance</h2>
+          <p>
+            This project is academically significant for several reasons:
+          </p>
+          <ul>
+            <li><strong>It applies abstract mathematics to a tangible domain.</strong> Numerical methods courses often use hypothetical equations. This project applies the same methods to a scenario everyone understands — game scoring — making the concepts concrete and relatable.</li>
+            <li><strong>It demonstrates the entire software engineering pipeline.</strong> From mathematical modeling to backend computation to frontend visualization, the project shows how theory turns into a working application.</li>
+            <li><strong>It produces measurable, quantitative results.</strong> The benchmark tables provide hard numbers (RMSE, runtime, efficiency score) that can be analyzed and discussed critically.</li>
+            <li><strong>It demonstrates model flexibility.</strong> The four scenario presets prove that different game styles can be simulated by adjusting parameters alone, without changing any code or mathematical structure.</li>
+          </ul>
+          <div class="callout tip">
+            <div class="callout-icon">💡</div>
+            <div class="callout-body">
+              <strong>Why not just use a library like SciPy?</strong>
+              <p>Implementing solvers from scratch demonstrates understanding of the algorithms. Libraries hide the mechanics. Hand-coding each method proves you understand the step-by-step process: how slopes are computed, how predictions are corrected, and how errors accumulate. This is the pedagogical value of the project.</p>
             </div>
           </div>
         </div>
 
+        <!-- ═══════ SECTION 3 ═══════ -->
         <div class="section-card">
-          <h2>3. Full Formula Logic</h2>
-          <div class="formula-box">
-<pre>1. drive = attack × momentum × tempo × saturation
-2. pressure = 1 ± pressure_strength × lead_difference
-3. clutch = periodic burst term based on time
-4. defensive_drag = opponent_defense × coupling × current_score
-5. final rate = max(0, drive × pressure + clutch - defensive_drag)</pre>
+          <h2>3. Understanding ODEs from Scratch</h2>
+          <p>If you need to explain what an ODE is:</p>
+          <div class="detail-grid">
+            <div class="detail-card">
+              <h3>What is an ODE?</h3>
+              <p>An <strong>Ordinary Differential Equation</strong> is an equation that relates a function to its derivative(s). In this project, the function is the score S(t) and the derivative dS/dt is the <strong>scoring rate</strong> — how fast the score is changing at any given moment.</p>
+              <div class="formula-box">
+<pre>dS/dt = f(t, S)
+
+"The rate of change of the score at time t
+ depends on the current time and the current score."</pre>
+              </div>
+            </div>
+            <div class="detail-card">
+              <h3>What is an Initial Value Problem (IVP)?</h3>
+              <p>An IVP is an ODE together with a starting condition. We know the score at t=0 and want to find the score at all future times.</p>
+              <div class="formula-box">
+<pre>Given: dS/dt = f(t, S)
+Given: S(0) = S_initial
+Find:  S(t) for t > 0</pre>
+              </div>
+              <p>The key insight: if we know the current state and the derivative, we can estimate the next state by stepping forward a small amount. This is exactly what numerical methods do.</p>
+            </div>
           </div>
-          <p>
-            This formula structure is important because it explains that scoring is not random. It is influenced by offense, defense, current lead, and a saturation cap.
-          </p>
+          <div class="detail-grid" style="margin-top:12px;">
+            <div class="detail-card">
+              <h3>Why can't we solve this analytically?</h3>
+              <p>Our ODE system is <strong>nonlinear</strong> — the derivative function contains products, max() clamps, and sinusoidal terms. For most nonlinear ODEs, no closed-form solution exists. We must use numerical approximation to step through time and build the solution point by point.</p>
+            </div>
+            <div class="detail-card">
+              <h3>What does "coupled" mean?</h3>
+              <p>A <strong>coupled system</strong> means the derivative of S_A depends not just on S_A itself, but also on S_B (through the pressure and defensive drag terms). Similarly, dS_B/dt depends on S_A. This means you cannot solve one equation independently — they must be solved <strong>simultaneously</strong> at each step.</p>
+            </div>
+          </div>
+          <div class="say-box">
+            <p>"An ODE describes how a quantity changes over time. My project solves an initial value problem: given starting scores and a derivative function that models scoring dynamics, I step forward in time to compute the full score trajectory. The system is coupled because each team's scoring rate depends on the other team's state."</p>
+          </div>
         </div>
 
+        <!-- ═══════ SECTION 4 ═══════ -->
         <div class="section-card">
-          <h2>4. Method Comparison Notes</h2>
+          <h2>4. Complete ODE Model — Every Term Explained</h2>
+          <p>The full ODE system has four components. Understanding each one is critical for your viva:</p>
+
+          <h3>Component 1: Saturation Drive</h3>
+          <div class="formula-box">
+<pre>drive_i = attack_i × momentum_i × tempo × max(0.05, 1 − S_i / score_cap)</pre>
+          </div>
+          <p><strong>What it does:</strong> This is the team's base scoring potential. It combines attack power, current momentum, and game tempo. The saturation factor <code>(1 − S_i / score_cap)</code> makes scoring progressively harder as the score approaches the cap — like a governor that prevents unrealistic runaway scoring. The <code>max(0.05, ...)</code> ensures scoring never completely stops.</p>
+          <p><strong>Example:</strong> If attack=1.4, momentum=1.0, tempo=1.0, score=60, cap=120: drive = 1.4 × 1.0 × 1.0 × max(0.05, 1 − 60/120) = 1.4 × 0.5 = <strong>0.7</strong>. At half the cap, scoring potential has halved.</p>
+
+          <h3>Component 2: Competitive Pressure</h3>
+          <div class="formula-box">
+<pre>L = S_A − S_B   (lead difference)
+P_A = 1 − pressure_strength × L
+P_B = 1 + pressure_strength × L</pre>
+          </div>
+          <p><strong>What it does:</strong> When Team A is leading (L > 0), their pressure factor decreases (they ease off) while Team B's increases (they push harder). This models the psychological dynamic of competitive games — the trailing team intensifies play.</p>
+          <p><strong>Example:</strong> If Team A leads by 10 points with pressure_strength=0.03: P_A = 1 − 0.03 × 10 = <strong>0.7</strong>, P_B = 1 + 0.03 × 10 = <strong>1.3</strong>. The trailing team gets a 30% boost; the leading team is suppressed by 30%.</p>
+
+          <h3>Component 3: Clutch Oscillation</h3>
+          <div class="formula-box">
+<pre>C_A(t) = clutch_A × sin(0.9 × t)
+C_B(t) = clutch_B × sin(0.9 × t + 1.1)</pre>
+          </div>
+          <p><strong>What it does:</strong> Creates periodic scoring bursts — moments of hot streaks and cold streaks. The phase offset (1.1 radians ≈ 63°) ensures the two teams don't surge simultaneously. When one team is on a run, the other may be in a scoring lull.</p>
+          <p><strong>Why sinusoidal?</strong> Sine functions are smooth, periodic, bounded (between −1 and +1), and well-understood mathematically. They model cyclical behavior without introducing sharp discontinuities that would make the ODE harder to solve numerically.</p>
+
+          <h3>Component 4: Defensive Drag</h3>
+          <div class="formula-box">
+<pre>R_A = defense_B × coupling × max(S_A, 0)
+R_B = defense_A × coupling × max(S_B, 0)</pre>
+          </div>
+          <p><strong>What it does:</strong> A score-proportional resistance force. As a team scores more, the opposing defense exerts more pressure. This is the equilibrium mechanism — without it, scores would grow indefinitely.</p>
+          <p><strong>Example:</strong> If defense_B=1.0, coupling=0.02, S_A=50: drag = 1.0 × 0.02 × 50 = <strong>1.0</strong>. This 1.0 is subtracted from Team A's scoring rate, significantly slowing them down.</p>
+
+          <h3>Final Assembly</h3>
+          <div class="formula-box">
+<pre>dS_A/dt = max(0, drive_A × P_A + C_A(t) − R_A)
+dS_B/dt = max(0, drive_B × P_B + C_B(t) − R_B)</pre>
+          </div>
+          <p>The <code>max(0, ...)</code> clamp is the final safeguard: if the combined effect of pressure, clutch, and drag would produce a negative scoring rate, we clamp it to zero. This ensures scores can only increase, which is the physical constraint of a game scoring system.</p>
+        </div>
+
+        <!-- ═══════ SECTION 5 ═══════ -->
+        <div class="section-card">
+          <h2>5. Numerical Methods — Deep Understanding</h2>
+          <p>Each method answers the same question differently: "Given the current state y_n at time t_n, what is the state y_{n+1} at time t_{n+1} = t_n + h?"</p>
+
+          <h3>Euler Method (1st order)</h3>
+          <div class="formula-box">
+<pre>y_{n+1} = y_n + h × f(t_n, y_n)</pre>
+          </div>
+          <p><strong>Intuition:</strong> Take the slope at the current point, draw a straight line forward for distance h, and that's your next point. It's the simplest possible approach — like driving forward while only looking at your current direction, never adjusting for the road ahead.</p>
+          <p><strong>Weakness:</strong> Uses only one slope evaluation at the beginning of the interval. If the true solution curves, Euler misses the curvature and overshoots or undershoots. Error = O(h) per integration — the worst among all methods in this project.</p>
+
+          <h3>Heun Method / Improved Euler (2nd order)</h3>
+          <div class="formula-box">
+<pre>k1 = f(t_n, y_n)                        ← slope at start
+y_predict = y_n + h × k1                ← Euler prediction
+k2 = f(t_n + h, y_predict)              ← slope at predicted end
+y_{n+1} = y_n + (h/2) × (k1 + k2)      ← average of both slopes</pre>
+          </div>
+          <p><strong>Intuition:</strong> Like Euler, but you also look at where Euler would take you and check the slope there. Then you average the two slopes for a better estimate. It's a predictor-corrector: predict with Euler, correct by averaging.</p>
+          <p><strong>Improvement over Euler:</strong> By using two slope evaluations instead of one, the method captures the curvature of the solution and achieves 2nd-order accuracy: O(h²).</p>
+
+          <h3>Midpoint Method (2nd order)</h3>
+          <div class="formula-box">
+<pre>k1 = f(t_n, y_n)                        ← slope at start
+y_mid = y_n + (h/2) × k1                ← half-step prediction
+k2 = f(t_n + h/2, y_mid)                ← slope at midpoint
+y_{n+1} = y_n + h × k2                  ← use midpoint slope for full step</pre>
+          </div>
+          <p><strong>Intuition:</strong> Instead of averaging two endpoints like Heun, go halfway, check the slope there, and use that middle slope for the full step. Often more accurate in practice because the midpoint slope is usually closest to the average slope over the interval.</p>
+
+          <h3>Ralston Method (optimized 2nd order)</h3>
+          <div class="formula-box">
+<pre>k1 = f(t_n, y_n)
+k2 = f(t_n + 3h/4, y_n + (3h/4) × k1)
+y_{n+1} = y_n + h × ((1/3) × k1 + (2/3) × k2)</pre>
+          </div>
+          <p><strong>Intuition:</strong> Like Midpoint, but uses 3/4 of the interval instead of 1/2, with optimized weights (1/3 and 2/3). These specific constants minimize the leading term of the truncation error. It's still 2nd order, but with a smaller error constant.</p>
+          <p><strong>Key viva point:</strong> Shows that within the same order class, you can optimize the coefficients. Not all 2nd-order methods are equal.</p>
+
+          <h3>Adams-Bashforth 2 (explicit multistep, 2nd order)</h3>
+          <div class="formula-box">
+<pre>y_{n+1} = y_n + h × ((3/2) × f_n − (1/2) × f_{n-1})</pre>
+          </div>
+          <p><strong>Intuition:</strong> Instead of evaluating the derivative multiple times at the current step, reuse the derivative from the <em>previous</em> step. By extrapolating from two consecutive derivative values, you get 2nd-order accuracy with only one new function evaluation per step.</p>
+          <p><strong>Important detail:</strong> AB2 needs two starting values, so it can't self-start. Our implementation uses Heun for the first step (bootstrapping), then switches to AB2 for all subsequent steps.</p>
+          <p><strong>Trade-off:</strong> Fewer function evaluations per step = faster. But it needs memory (previous derivative) and can't self-start. Also, multistep methods can have stability limitations.</p>
+
+          <h3>Runge-Kutta 4 (4th order)</h3>
+          <div class="formula-box">
+<pre>k1 = f(t_n, y_n)
+k2 = f(t_n + h/2, y_n + (h/2) × k1)
+k3 = f(t_n + h/2, y_n + (h/2) × k2)
+k4 = f(t_n + h, y_n + h × k3)
+
+y_{n+1} = y_n + (h/6) × (k1 + 2×k2 + 2×k3 + k4)</pre>
+          </div>
+          <p><strong>Intuition:</strong> Takes FOUR slope evaluations: beginning, two at the midpoint, and one at the end. Combines them with the classic 1:2:2:1 weighting. This captures curvature information so well that the error is O(h⁴) — dramatically smaller than lower-order methods.</p>
+          <p><strong>Why is it the reference?</strong> With 4th-order accuracy, RK4 is overwhelmingly more precise than Euler or Heun for the same step size. Using it with a finer step size (h/refinement) gives an even more accurate result, which we treat as ground truth for benchmarking.</p>
+          <p><strong>Cost:</strong> 4 function evaluations per step vs 1 for Euler. For simple problems, this overhead may not be worth it. The benchmark data shows whether it is.</p>
+        </div>
+
+        <!-- ═══════ SECTION 6 ═══════ -->
+        <div class="section-card">
+          <h2>6. How the Code Works — Architecture Walkthrough</h2>
+          <p>The project has four Python modules and two frontend files. Here's what each does:</p>
+          <div class="step-flow">
+            <div class="step-item">
+              <div class="step-body">
+                <h4>model.py — ODE Definitions</h4>
+                <p>Defines the <code>TeamDynamics</code> dataclass (attack, defense, momentum, clutch), the <code>MatchParams</code> dataclass (global parameters), and the <code>score_derivatives()</code> function that computes dS_A/dt and dS_B/dt. This is the mathematical heart of the project.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-body">
+                <h4>methods.py — Numerical Solvers</h4>
+                <p>Contains the <code>NumericalMethods</code> class with six static methods: euler, heun, midpoint, ralston, rk4, and adams_bashforth2. Each method calls an internal step function repeatedly through the <code>_integrate()</code> helper. Returns a <code>SimulationResult</code> with time array, score_a array, and score_b array.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-body">
+                <h4>analytics.py — Metrics Computation</h4>
+                <p>Implements <code>summarize()</code> to compute game analytics (winner, lead changes, volatility, comeback index) and <code>trajectory_rmse()</code> to compute path accuracy against the reference solution. Defines <code>MatchAnalytics</code> and <code>BenchmarkMetrics</code> dataclasses for structured output.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-body">
+                <h4>app.py — Flask Backend & Orchestration</h4>
+                <p>The main application file. Defines scenario presets, method catalog, and the <code>simulate()</code> function that: (1) parses user inputs with type-safe helpers, (2) constructs model parameters, (3) runs the reference RK4 solution, (4) runs each selected method with timing, (5) computes benchmarks, and (6) passes everything to Jinja2 templates for rendering.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-body">
+                <h4>app.js — Frontend Interactivity</h4>
+                <p>Handles scenario card selection (updates form values when preset is clicked), method card toggling (checkbox + visual states), and Chart.js initialization for the score evolution line chart and benchmark mixed chart (bar + line).</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-body">
+                <h4>Templates — HTML Rendering</h4>
+                <p>Four Jinja2 templates: index.html (main simulator), presentation.html (slide deck), study_guide.html (this page), and technical_reference.html (API and formula documentation). All share the same CSS design system with glassmorphic styling.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════ SECTION 7 ═══════ -->
+        <div class="section-card">
+          <h2>7. Worked Numerical Example</h2>
+          <p>Let's manually trace one Euler step and one RK4 step using the Balanced Classic scenario defaults:</p>
+          <div class="callout note">
+            <div class="callout-icon">📝</div>
+            <div class="callout-body">
+              <strong>Setup</strong>
+              <p>t₀ = 0, S_A = 0, S_B = 0, h = 0.1, attack_A = 1.4, defense_A = 1.0, momentum_A = 1.0, clutch_A = 0.2, tempo = 1.0, pressure = 0.03, coupling = 0.02, cap = 120</p>
+            </div>
+          </div>
+
+          <h3>Computing f(t=0, [0, 0]) for Team A:</h3>
+          <div class="code-block">
+<span class="cm"># Step 1: Lead and pressure</span>
+L = 0 − 0 = <span class="nu">0</span>
+P_A = 1 − 0.03 × 0 = <span class="nu">1.0</span>
+
+<span class="cm"># Step 2: Saturation drive</span>
+saturation = max(0.05, 1 − 0/120) = max(0.05, 1.0) = <span class="nu">1.0</span>
+drive_A = 1.4 × 1.0 × 1.0 × 1.0 = <span class="nu">1.4</span>
+
+<span class="cm"># Step 3: Clutch oscillation</span>
+C_A = 0.2 × sin(0.9 × 0) = 0.2 × 0 = <span class="nu">0.0</span>
+
+<span class="cm"># Step 4: Defensive drag</span>
+R_A = 1.0 × 0.02 × max(0, 0) = <span class="nu">0.0</span>
+
+<span class="cm"># Step 5: Final rate</span>
+dS_A/dt = max(0, 1.4 × 1.0 + 0.0 − 0.0) = <span class="nu">1.4</span>
+          </div>
+
+          <h3>Euler update:</h3>
+          <div class="formula-box">
+<pre>S_A(0.1) = 0 + 0.1 × 1.4 = 0.14</pre>
+          </div>
+
+          <h3>RK4 would compute at four points:</h3>
+          <p>k₁ at (0, [0,0]), k₂ at (0.05, [0.07, ...]), k₃ at (0.05, [~0.07, ...]), k₄ at (0.1, [~0.14, ...]). The weighted average gives S_A(0.1) ≈ 0.1398 — very close to Euler here because the function is nearly linear near t=0. The difference grows at later time steps when nonlinearity kicks in.</p>
+
+          <div class="say-box">
+            <p>"At t=0 both methods give nearly the same result because the ODE is approximately linear near zero. But as time progresses and scores grow, the saturation, pressure, and clutch terms create nonlinear behavior. That's when Euler starts to diverge from RK4, and the trajectory RMSE shows the accumulated difference."</p>
+          </div>
+        </div>
+
+        <!-- ═══════ SECTION 8 ═══════ -->
+        <div class="section-card">
+          <h2>8. Benchmark Terms You Must Explain Clearly</h2>
+          <div class="qa-grid">
+            <div class="qa-item">
+              <strong>Trajectory RMSE (Root Mean Square Error)</strong>
+              It measures how closely the <em>entire score path</em> matches the reference path, not only the final score. Think of it as measuring the area of deviation between two curves. A method might hit the same final score but follow a completely different path — RMSE catches that path difference. Computed as: √( (1/2N) × Σ [(A_i − A_i_ref)² + (B_i − B_i_ref)²] )
+            </div>
+            <div class="qa-item">
+              <strong>Runtime (milliseconds)</strong>
+              The wall-clock time the solver takes to compute all steps. Measured using Python's <code>perf_counter()</code> which provides high-resolution timing. This matters for real-time applications where the solver must complete within a frame budget.
+            </div>
+            <div class="qa-item">
+              <strong>Final-Score Absolute Error</strong>
+              The absolute difference between the method's final score and the reference's final score. Simple to understand but insufficient alone — a method could arrive at the right answer via a completely wrong trajectory.
+            </div>
+            <div class="qa-item">
+              <strong>Efficiency Score</strong>
+              Defined as 1 / ((RMSE + ε) × (runtime_ms + ε)). Combines accuracy and speed into one number. Higher efficiency means better bang-per-millisecond. The epsilon (ε) prevents division by zero.
+            </div>
+            <div class="qa-item">
+              <strong>Reference Baseline</strong>
+              A very fine-step RK4 run is used as the trusted comparison trajectory. The reference step size is h/{{ inputs.benchmark_refinement }}, meaning the reference takes {{ inputs.benchmark_refinement }}× more steps. Since RK4 is 4th-order, this fine reference is extremely close to the true analytic solution.
+            </div>
+            <div class="qa-item">
+              <strong>Lead Changes</strong>
+              The number of times the score lead flips from one team to the other during the simulation. More lead changes indicate a more competitive, dynamic match.
+            </div>
+            <div class="qa-item">
+              <strong>Volatility Index</strong>
+              Computed as: standard deviation of total score / mean of total score. Higher volatility means the total scoring rate fluctuated more, indicating an unpredictable match with momentum swings.
+            </div>
+            <div class="qa-item">
+              <strong>Comeback Index</strong>
+              Measures how big a deficit the eventual winner overcame. Computed as: (max deficit suffered by winner) / (winner's final score). A value near 1.0 means a dramatic, come-from-behind victory.
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════ SECTION 9 ═══════ -->
+        <div class="section-card">
+          <h2>9. Reading and Interpreting Charts</h2>
+          <div class="detail-grid">
+            <div class="detail-card">
+              <h3>📊 Score Evolution Chart</h3>
+              <ul>
+                <li>Each numerical method produces its own pair of lines (Team A = solid, Team B = dashed)</li>
+                <li>Colors are assigned by method name — same color = same solver</li>
+                <li><strong>Overlapping lines</strong> = methods agree (the model is well-behaved for those conditions)</li>
+                <li><strong>Diverging lines</strong> = methods disagree (reveals where lower-order methods struggle with nonlinearity)</li>
+                <li>Look for divergence points: they often coincide with clutch peaks or sharp pressure transitions</li>
+              </ul>
+            </div>
+            <div class="detail-card">
+              <h3>📉 Benchmark Dual-Axis Chart</h3>
+              <ul>
+                <li><strong>Left Y-axis:</strong> Green bars = runtime in milliseconds (taller = slower)</li>
+                <li><strong>Right Y-axis:</strong> Orange line = trajectory RMSE (higher = less accurate)</li>
+                <li>The ideal method appears as a short green bar with a low orange point</li>
+                <li>If a method has a tall bar but low RMSE, it's accurate but slow (like RK4)</li>
+                <li>If a method has a short bar but high RMSE, it's fast but inaccurate (like Euler)</li>
+              </ul>
+            </div>
+          </div>
+          <div class="callout warning">
+            <div class="callout-icon">⚠️</div>
+            <div class="callout-body">
+              <strong>Important observation for your viva</strong>
+              <p>In close matches, different methods may predict different winners! If Euler says Team A wins but RK4 says Team B wins, it means solver choice literally changed the predicted outcome. This is the strongest possible argument for why numerical method selection matters.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════ SECTION 10 ═══════ -->
+        <div class="section-card">
+          <h2>10. Method Comparison — What to Say for Each</h2>
           <table class="mini-table">
             <thead>
               <tr>
                 <th>Method</th>
-                <th>Say This</th>
+                <th>What to Say About It</th>
+                <th>When It's Useful</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td>Euler</td><td>It is the simplest method and easiest to explain, but it is less accurate for nonlinear systems.</td></tr>
-              <tr><td>Heun</td><td>It corrects the Euler estimate by taking a second slope, so it improves stability.</td></tr>
-              <tr><td>Midpoint</td><td>It estimates the slope at the midpoint, which usually gives better accuracy than Euler.</td></tr>
-              <tr><td>Ralston</td><td>It is a refined second-order method with better error behavior than standard RK2 choices.</td></tr>
-              <tr><td>Adams-Bashforth 2</td><td>It uses previous derivative information, so it is efficient for repeated steps.</td></tr>
-              <tr><td>RK4</td><td>It is the strongest accuracy method in this project and serves as the reference baseline.</td></tr>
+              <tr>
+                <td><strong>Euler</strong></td>
+                <td>"It is the simplest numerical method — one slope evaluation per step. It's easy to implement and explain, but it accumulates error fastest because it cannot capture the curvature of the solution. It serves as the baseline for comparison."</td>
+                <td>Teaching/demonstration; very simple ODEs; when h is extremely small.</td>
+              </tr>
+              <tr>
+                <td><strong>Heun</strong></td>
+                <td>"Heun improves on Euler by taking a second slope at the predicted endpoint, then averaging both. This predictor-corrector approach gives 2nd-order accuracy with only one extra function evaluation per step."</td>
+                <td>When you need better accuracy than Euler without much extra cost.</td>
+              </tr>
+              <tr>
+                <td><strong>Midpoint</strong></td>
+                <td>"Instead of averaging start and end slopes like Heun, Midpoint estimates the slope at the center of the interval. This often gives better accuracy because the midpoint slope is usually the most representative."</td>
+                <td>General-purpose 2nd-order integration; geometrically intuitive.</td>
+              </tr>
+              <tr>
+                <td><strong>Ralston</strong></td>
+                <td>"It's a 2nd-order method with mathematically optimized weights that minimize the leading error term. It shows that even within the same order class, coefficient choice matters."</td>
+                <td>When you want the best possible 2nd-order accuracy.</td>
+              </tr>
+              <tr>
+                <td><strong>Adams-Bashforth 2</strong></td>
+                <td>"AB2 reuses the derivative from the previous step, achieving 2nd-order accuracy with only one new function evaluation. It needs a separate method for bootstrapping the first step."</td>
+                <td>Long simulations where per-step cost matters; when memory is available.</td>
+              </tr>
+              <tr>
+                <td><strong>RK4</strong></td>
+                <td>"RK4 is the gold standard for this project. Four slope evaluations per step give 4th-order accuracy — dramatically better than all other methods here. A finer-step RK4 run serves as the reference trajectory."</td>
+                <td>When accuracy is the priority; reference solutions; scientific computing.</td>
+              </tr>
             </tbody>
           </table>
         </div>
 
+        <!-- ═══════ SECTION 11 ═══════ -->
         <div class="section-card">
-          <h2>5. Benchmark Terms You Must Explain Clearly</h2>
-          <div class="qa-grid">
-            <div class="qa-item">
-              <strong>Trajectory RMSE</strong>
-              It measures how closely the whole score path matches the reference path, not only the final score.
-            </div>
-            <div class="qa-item">
-              <strong>Runtime</strong>
-              It shows how long the solver takes, which matters when a model must run quickly.
-            </div>
-            <div class="qa-item">
-              <strong>Efficiency score</strong>
-              It combines accuracy and speed into one number so methods can be compared more easily.
-            </div>
-            <div class="qa-item">
-              <strong>Reference baseline</strong>
-              A very fine-step RK4 run is used as the trusted comparison trajectory.
-            </div>
-          </div>
-        </div>
-
-        <div class="section-card">
-          <h2>6. Scenario Presets</h2>
-          <p>These presets help you demonstrate different match styles without manually changing every field.</p>
+          <h2>11. Scenario Presets — When to Use Each</h2>
           <table class="mini-table">
             <thead>
               <tr>
                 <th>Scenario</th>
-                <th>Use When You Want To Show</th>
+                <th>What It Shows</th>
+                <th>Best for Demonstrating</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td>Balanced Classic</td><td>A fair match with stable, moderate scoring.</td></tr>
-              <tr><td>High Scoring Arena</td><td>Fast offense, larger totals, and more aggressive score movement.</td></tr>
-              <tr><td>Defensive Grind</td><td>Slow, tactical scoring and stronger suppression effects.</td></tr>
-              <tr><td>Late Comeback Drama</td><td>A match where one side starts behind and the clutch effect matters more.</td></tr>
+              <tr>
+                <td><strong>Balanced Classic</strong></td>
+                <td>A fair match with moderate, steady scoring. Both teams have similar stats. Score trajectories are smooth and predictable.</td>
+                <td>Baseline method comparison — methods should agree closely here. Good starting point for any demo.</td>
+              </tr>
+              <tr>
+                <td><strong>High Scoring Arena</strong></td>
+                <td>Fast offense with weak defense. High tempo drives rapid score growth. Larger final totals.</td>
+                <td>Method divergence at high growth rates. Shows where Euler drifts fastest from RK4.</td>
+              </tr>
+              <tr>
+                <td><strong>Defensive Grind</strong></td>
+                <td>Slow tempo with strong defensive suppression. Low, tactical scoring with minimal swings.</td>
+                <td>How methods converge when the ODE is "gentle." Useful to argue that simple methods are sometimes sufficient.</td>
+              </tr>
+              <tr>
+                <td><strong>Late Comeback Drama</strong></td>
+                <td>Team B starts with an 8-point lead. Team A has high clutch (0.42) and strong pressure sensitivity.</td>
+                <td>Pressure and clutch effects in action. The nonlinearity is strongest here, making method comparison most dramatic.</td>
+              </tr>
             </tbody>
           </table>
+          <div class="say-box">
+            <p>"Each preset uses the same ODE model with different coefficient values. This proves the model's flexibility — it can simulate defensive grinds, high-scoring shootouts, and comeback scenarios without any structural changes to the mathematics."</p>
+          </div>
         </div>
 
+        <!-- ═══════ SECTION 12 ═══════ -->
         <div class="section-card">
-          <h2>7. How to Answer Common Viva Questions</h2>
-          <div class="qa-grid">
-            <div class="qa-item">
-              <strong>Why did you choose ODEs?</strong>
-              Because ODEs are ideal for continuous change and let us model score growth over time.
+          <h2>12. Common Mistakes to Avoid</h2>
+          <div class="compare-row">
+            <div class="compare-card bad">
+              <h3>❌ Don't Say This</h3>
+              <ul>
+                <li>"RK4 is always the best method."</li>
+                <li>"This project predicts real game results."</li>
+                <li>"Euler is useless."</li>
+                <li>"The numbers in the table are exact."</li>
+                <li>"I used a library for the solvers."</li>
+              </ul>
             </div>
-            <div class="qa-item">
-              <strong>Why compare many methods?</strong>
-              To show the trade-off between accuracy, speed, and implementation complexity.
+            <div class="compare-vs">vs</div>
+            <div class="compare-card good">
+              <h3>✅ Say This Instead</h3>
+              <ul>
+                <li>"RK4 is the most accurate, but not always the most efficient."</li>
+                <li>"This project models scoring dynamics; calibration with real data would be needed for prediction."</li>
+                <li>"Euler is the simplest baseline, useful for showing how error accumulates."</li>
+                <li>"All values are numerical approximations with quantified error bounds."</li>
+                <li>"I implemented all solvers from scratch to demonstrate algorithmic understanding."</li>
+              </ul>
             </div>
-            <div class="qa-item">
-              <strong>Why not only use RK4?</strong>
-              Because numerical methods should be compared to show the improvement over simpler methods.
-            </div>
-            <div class="qa-item">
-              <strong>What makes this a game analytics project?</strong>
-              It uses scoring, momentum, defense, and comeback measures to analyze match behavior.
+          </div>
+          <div class="callout warning">
+            <div class="callout-icon">⚠️</div>
+            <div class="callout-body">
+              <strong>Critical mistakes in viva</strong>
+              <p>Never claim your model is stochastic (it's deterministic). Never say "I just used a formula" (you solved a coupled ODE system numerically). Never confuse truncation error with round-off error. And never say all methods give the same result — the whole point is that they don't.</p>
             </div>
           </div>
         </div>
 
+        <!-- ═══════ SECTION 13 ═══════ -->
         <div class="section-card">
-          <h2>8. Short Speaking Flow During Presentation</h2>
-          <ol>
-            <li>Introduce the project title and objective.</li>
-            <li>Explain the ODE model and why scores evolve continuously.</li>
-            <li>Show the scenario presets and say that they represent different game styles.</li>
-            <li>Demonstrate the method cards and mention the solver orders.</li>
-            <li>Run the simulation and show the graph.</li>
-            <li>Discuss which method is most accurate and which is fastest.</li>
-            <li>Conclude with why the project is useful for numerical analysis and balancing studies.</li>
-          </ol>
+          <h2>13. How to Answer Common Viva Questions</h2>
+          <div class="qa-grid">
+            <div class="qa-item">
+              <strong>Q: Why did you choose ODEs instead of a simpler approach?</strong>
+              "Because ODEs model continuous change over time. A static formula like 'Team A scores X per minute' cannot capture feedback loops, momentum swings, or competitive pressure. ODEs let me model how the scoring rate itself changes dynamically."
+            </div>
+            <div class="qa-item">
+              <strong>Q: What is the difference between Euler and RK4?</strong>
+              "Euler uses one slope evaluation per step and is 1st order accurate. RK4 uses four slope evaluations and is 4th order accurate. In practical terms, if you halve the step size, Euler halves its error while RK4 reduces error by a factor of 16. This means RK4 is dramatically more accurate for the same step size."
+            </div>
+            <div class="qa-item">
+              <strong>Q: Why compare so many methods?</strong>
+              "To demonstrate the accuracy-versus-cost trade-off quantitatively. Each method sits at a different point on this spectrum. Comparing all six lets me show that method selection depends on whether you prioritize speed (Euler), accuracy (RK4), or balanced efficiency (possibly Heun or Ralston)."
+            </div>
+            <div class="qa-item">
+              <strong>Q: Why not only use RK4 if it's the most accurate?</strong>
+              "Because RK4 costs 4× more function evaluations per step than Euler. For applications with strict runtime budgets — like real-time game physics at 60 FPS — a simpler method with a smaller step size might be more practical. The whole point of numerical analysis is finding the best method for a given context."
+            </div>
+            <div class="qa-item">
+              <strong>Q: What is RMSE and why do you use it?</strong>
+              "RMSE stands for Root Mean Square Error. I use trajectory RMSE, which measures how closely an entire score path matches the reference over all time steps. Unlike final-score error, RMSE catches path deviations — a method might reach the correct final score via a completely wrong trajectory."
+            </div>
+            <div class="qa-item">
+              <strong>Q: What makes this a game analytics project, not just a math project?</strong>
+              "It computes game-specific metrics: lead changes, volatility index, comeback index, scoring rates. These are meaningful game analytics measures that could be used for match quality evaluation, balance testing, or broadcast commentary."
+            </div>
+            <div class="qa-item">
+              <strong>Q: How is the reference solution generated?</strong>
+              "I run RK4 with a step size {{ inputs.benchmark_refinement }}× smaller than the simulation step size. Since RK4 is already 4th-order accurate, using a much finer step makes the reference solution extremely close to the true analytic solution — close enough to serve as ground truth for benchmarking."
+            </div>
+            <div class="qa-item">
+              <strong>Q: Can this model be used for real game prediction?</strong>
+              "The model structure is suitable, but the parameters would need to be calibrated against real game data using statistical fitting or machine learning. Currently, the parameters are chosen to produce realistic-looking trajectories, not to match any specific real-world dataset."
+            </div>
+            <div class="qa-item">
+              <strong>Q: What would you improve if you had more time?</strong>
+              "Three things: (1) Add stochastic noise terms to model game unpredictability, (2) Implement adaptive step-size control like RK45 that adjusts h based on estimated local error, and (3) Add time-varying parameters to model fatigue and tactical changes during a match."
+            </div>
+            <div class="qa-item">
+              <strong>Q: Explain the coupling in the ODE system.</strong>
+              "Both equations reference the other team's state. Team A's pressure factor depends on Team B's score through the lead difference L = S_A − S_B. Team A's defensive drag uses Team B's defense coefficient. This means you cannot solve one equation independently — they must be integrated simultaneously, which is why numerical methods process both components at each step."
+            </div>
+          </div>
         </div>
 
+        <!-- ═══════ SECTION 14 ═══════ -->
         <div class="section-card">
-          <h2>9. Final Revision Reminder</h2>
-          <p>
-            Remember this core line: “The project compares numerical methods on a nonlinear score evolution ODE model to study how solver choice affects simulation realism, accuracy, and performance.”
-          </p>
+          <h2>14. Presentation Speaking Flow — Step by Step</h2>
+          <div class="step-flow">
+            <div class="step-item">
+              <div class="step-body">
+                <h4>Introduction (30 seconds)</h4>
+                <p>"My project is called Game Score Evolution Simulator. It models two-team scoring as a coupled ODE system and compares six numerical methods for solving it."</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-body">
+                <h4>Problem Statement (1 minute)</h4>
+                <p>Explain why scoring is dynamic, not static. Mention attack, defense, momentum, pressure, and clutch. Say that ODEs capture this continuous, interactive evolution.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-body">
+                <h4>Show the Architecture (30 seconds)</h4>
+                <p>Point to the data flow: User Input → Flask → ODE Model → Solvers → Analytics → Charts. Mention that everything is hand-coded, no library black boxes.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-body">
+                <h4>Show the ODE Formula (1 minute)</h4>
+                <p>Walk through the formula: drive × pressure + clutch − drag. Explain each term in one sentence. Emphasize the coupling and the max(0) constraint.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-body">
+                <h4>Demonstrate Scenario Presets (30 seconds)</h4>
+                <p>Show 2–3 presets. Say that different coefficients produce completely different game styles — proving model flexibility.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-body">
+                <h4>Run the Simulation Live (1 minute)</h4>
+                <p>Select a scenario, pick methods, click Run. Show the score chart and benchmark chart. Point out where methods diverge and which one is fastest vs. most accurate.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-body">
+                <h4>Discuss Results (1 minute)</h4>
+                <p>Use the benchmark table to highlight the accuracy-speed trade-off. Mention RMSE, runtime, efficiency. If methods predict different winners, highlight that as the key finding.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-body">
+                <h4>Conclude (30 seconds)</h4>
+                <p>"This project bridges numerical methods theory and applied game analytics. It shows that solver choice directly impacts simulation realism, accuracy, and even the predicted outcome."</p>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <!-- ═══════ SECTION 15 ═══════ -->
+        <div class="section-card">
+          <h2>15. Glossary of Technical Terms</h2>
+          <div class="glossary-grid">
+            <dl class="glossary-item">
+              <dt>ODE (Ordinary Differential Equation)</dt>
+              <dd>An equation relating a function to its derivatives. In this project, the function is the score and the derivative is the scoring rate.</dd>
+            </dl>
+            <dl class="glossary-item">
+              <dt>Initial Value Problem (IVP)</dt>
+              <dd>An ODE together with a known starting condition. We know S(0) and want to find S(t) for all t > 0.</dd>
+            </dl>
+            <dl class="glossary-item">
+              <dt>Coupled System</dt>
+              <dd>A system where each equation depends on the solution of another equation. Here, dS_A/dt depends on S_B and vice versa.</dd>
+            </dl>
+            <dl class="glossary-item">
+              <dt>Step Size (h)</dt>
+              <dd>The time increment between consecutive solver evaluations. Smaller h = more accurate but more computational work.</dd>
+            </dl>
+            <dl class="glossary-item">
+              <dt>Truncation Error</dt>
+              <dd>The error introduced by approximating the continuous differential equation with discrete steps. It comes from truncating the Taylor series.</dd>
+            </dl>
+            <dl class="glossary-item">
+              <dt>Order of Accuracy</dt>
+              <dd>Describes how fast error decreases as h shrinks. An order-p method has global error O(h^p). Halving h reduces error by factor 2^p.</dd>
+            </dl>
+            <dl class="glossary-item">
+              <dt>RMSE (Root Mean Square Error)</dt>
+              <dd>A measure of the average deviation between two trajectories over time. Computed as the square root of the mean squared differences.</dd>
+            </dl>
+            <dl class="glossary-item">
+              <dt>Predictor-Corrector</dt>
+              <dd>A two-phase method: predict using a simple formula (like Euler), then correct using additional information (like the slope at the predicted point).</dd>
+            </dl>
+            <dl class="glossary-item">
+              <dt>Multistep Method</dt>
+              <dd>A method that uses information from multiple previous steps (not just the current one). Adams-Bashforth 2 uses derivatives from steps n and n−1.</dd>
+            </dl>
+            <dl class="glossary-item">
+              <dt>Bootstrapping</dt>
+              <dd>Using a different method (like Heun) to compute the first step required by a multistep method that can't self-start.</dd>
+            </dl>
+            <dl class="glossary-item">
+              <dt>Saturation</dt>
+              <dd>The tendency for growth to slow as a quantity approaches a limit. In this project, scoring slows as it nears the score cap.</dd>
+            </dl>
+            <dl class="glossary-item">
+              <dt>Efficiency Score</dt>
+              <dd>A composite metric: 1 / (RMSE × runtime). Higher values indicate better accuracy per unit of computation time.</dd>
+            </dl>
+          </div>
+        </div>
+
+        <!-- ═══════ SECTION 16 ═══════ -->
+        <div class="section-card">
+          <h2>16. Final Revision Checklist</h2>
+          <p>Before your viva, make sure you can confidently answer all of these:</p>
+          <ol>
+            <li>What is an ODE and why is it appropriate for this problem?</li>
+            <li>Explain every term in the ODE formula: drive, pressure, clutch, drag.</li>
+            <li>What does "coupled" mean and why does it matter?</li>
+            <li>Describe the Euler method in one sentence. Do the same for RK4.</li>
+            <li>What is the order of accuracy and why does it matter?</li>
+            <li>Explain RMSE, efficiency score, and how the reference is generated.</li>
+            <li>Name two scenarios and explain what each demonstrates.</li>
+            <li>What are the project's limitations? What would you improve?</li>
+            <li>Why did you implement solvers from scratch instead of using a library?</li>
+            <li>What is the most important finding from the benchmark data?</li>
+          </ol>
+          <div class="say-box">
+            <p>"The project compares numerical methods on a nonlinear score evolution ODE model to study how solver choice affects simulation realism, accuracy, and performance. It demonstrates that mathematics can model, predict, and explain dynamic systems in a way that is both rigorous and visually compelling."</p>
+          </div>
+        </div>
+
       </section>
     </section>
   </main>
