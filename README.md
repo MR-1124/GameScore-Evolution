@@ -178,12 +178,6 @@ http://127.0.0.1:5000
 
 The app is production-ready with `gunicorn`. Deploy to any of these free platforms:
 
-| Platform | Start Command | Free Tier |
-|----------|--------------|-----------|
-| [Render](https://render.com) | `gunicorn app:app` | ✅ |
-| [Railway](https://railway.app) | `gunicorn app:app --bind 0.0.0.0:$PORT` | ✅ |
-| [PythonAnywhere](https://pythonanywhere.com) | WSGI config | ✅ |
-
 ---
 
 ## 📊 Benchmark Metrics
@@ -196,21 +190,6 @@ The app is production-ready with `gunicorn`. Deploy to any of these free platfor
 | **Efficiency Score** | `1 / ((RMSE + ε) × (runtime + ε))` | Speed-accuracy trade-off |
 
 Reference solution: RK4 at `h/refinement` step size (default 5× finer).
-
----
-
-## 🎓 Presentation Flow (Viva/Demo)
-
-1. **Introduce** the project: ODE-based game score modeling + numerical method comparison
-2. **Show the model**: Walk through drive → pressure → clutch → drag → assembly
-3. **Demonstrate scenarios**: Switch presets to prove model flexibility
-4. **Run live simulation**: Select methods, run, show evolution + benchmark charts
-5. **Analyze results**: Point to RMSE, runtime, efficiency — discuss trade-offs
-6. **Highlight key finding**: Different methods can predict different winners
-7. **Address limitations**: Deterministic, fixed params, no adaptive stepping
-8. **Conclude**: Solver choice is a consequential engineering decision
-
----
 
 ## 🔮 Future Enhancements
 
